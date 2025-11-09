@@ -10,16 +10,17 @@ public static class SymbolUtils
         string hostType;
         string methodName;
 
-        string prefix = "";
-        ISymbol containingType = symbol as ITypeSymbol ?? symbol.ContainingType;
+        var prefix = "";
+        var containingType = symbol as ITypeSymbol ?? symbol.ContainingType;
 
         // match all for nested types
         if (containingType.ContainingType is { })
+        {
             prefix = "*";
-
+        }
         else
         {
-            INamespaceSymbol ns = containingType.ContainingNamespace;
+            var ns = containingType.ContainingNamespace;
             while (ns?.Name is { Length: > 0 } containingNamespace)
             {
                 prefix = containingNamespace + "." + prefix;
@@ -67,6 +68,7 @@ public static class SymbolUtils
             hostType = symbol.ToString();
             methodName = "*";
         }
+
         return new DisasmoSymbolInfo(target, hostType, methodName);
     }
 }

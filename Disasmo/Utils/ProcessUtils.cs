@@ -10,7 +10,7 @@ namespace Disasmo;
 public static class ProcessUtils
 {
     public static async Task<ProcessResult> RunProcess(
-        string path, 
+        string path,
         string args = "", 
         Dictionary<string, string> envVars = null, 
         string workingDir = null, 
@@ -53,11 +53,13 @@ public static class ProcessUtils
                 logger.AppendLine(e.Data);
                 loggerForErrors.AppendLine(e.Data);
             };
+
             process.OutputDataReceived += (sender, e) =>
             {
                 outputLogger?.Invoke(false, e.Data + "\n");
                 logger.AppendLine(e.Data);
             };
+
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
@@ -78,16 +80,18 @@ public static class ProcessUtils
         }
     }
 
-    public static Task WaitForExitAsync(this Process process,
-        CancellationToken cancellationToken = default(CancellationToken))
+    public static Task WaitForExitAsync(this Process process, CancellationToken cancellationToken = default)
     {
         if (process.HasExited) 
             return Task.CompletedTask;
+
         var tcs = new TaskCompletionSource<object>();
         process.EnableRaisingEvents = true;
         process.Exited += (sender, args) => tcs.TrySetResult(null);
-        if (cancellationToken != default(CancellationToken))
+
+        if (cancellationToken != default)
             cancellationToken.Register(() => tcs.TrySetCanceled());
+
         return process.HasExited ? Task.CompletedTask : tcs.Task;
     }
 
@@ -95,6 +99,7 @@ public static class ProcessUtils
     {
         if (process == null)
             return;
+
         try
         {
             if (!process.HasExited)
@@ -111,9 +116,10 @@ public static class ProcessUtils
         if (envVars == null)
             return "";
 
-        string envVar = "";
+        var envVar = "";
         foreach (var ev in envVars)
             envVar += ev.Key + "=" + ev.Value + "\n";
+
         return envVar;
     }
 }

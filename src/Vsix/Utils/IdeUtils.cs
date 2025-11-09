@@ -35,8 +35,10 @@ public static class IdeUtils
         var activeSolutionProjects = dte.ActiveSolutionProjects as Array;
         if (activeSolutionProjects != null && activeSolutionProjects.Length > 0)
             return activeSolutionProjects.GetValue(0) as Project;
+
         return null;
     }
+
     public static void SaveActiveDocument(this DTE dte)
     {
         try
@@ -71,16 +73,18 @@ public static class IdeUtils
                 MessageBox.Show("DisasmoPackage is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
                 return null;
             }
+
             await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             var window = await DisasmoPackage.Current.ShowToolWindowAsync(typeof(DisasmWindow), 0, create: true, cancellationToken: cancellationToken);
+
             if (tryTwice)
             {
                 await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
                 // no idea why I have to call it twice, it doesn't work if I do it only once on the first usage
-                window = await DisasmoPackage.Current.ShowToolWindowAsync(typeof(T), 0, create: true,
-                    cancellationToken: cancellationToken);
+                window = await DisasmoPackage.Current.ShowToolWindowAsync(typeof(T), 0, create: true, cancellationToken: cancellationToken);
                 await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             }
+
             return window as T;
         }
         catch
@@ -98,8 +102,8 @@ public static class IdeUtils
         var diffDir = Path.Combine(tempPath, "Disasmo_diffs_" + Guid.NewGuid().ToString("N").Substring(0, 10));
         Directory.CreateDirectory(diffDir);
 
-        string tmpFileLeft = Path.Combine(diffDir, "previous.asm");
-        string tmpFileRight = Path.Combine(diffDir, "current.asm");
+        var tmpFileLeft = Path.Combine(diffDir, "previous.asm");
+        var tmpFileRight = Path.Combine(diffDir, "current.asm");
 
         File.WriteAllText(tmpFileLeft, contentLeft.NormalizeLineEndings());
         File.WriteAllText(tmpFileRight, contentRight.NormalizeLineEndings());
@@ -107,7 +111,7 @@ public static class IdeUtils
         try
         {
             // Copied from https://github.com/madskristensen/FileDiffer/blob/main/src/Commands/DiffFilesCommand.cs#L48-L56 (c) madskristensen
-            object args = $"\"{tmpFileLeft}\" \"{tmpFileRight}\"";
+            var args = $"\"{tmpFileLeft}\" \"{tmpFileRight}\"";
             ((DTE)Package.GetGlobalService(typeof(SDTE))).Commands.Raise("5D4C0442-C0A2-4BE8-9B4D-AB1C28450942", 256, ref args, ref args);
         }
         catch (Exception exc)
@@ -147,7 +151,7 @@ public static class IdeUtils
         {
             // it will throw "Release config was not found" to the Output if there is no such config in the project
             projectConfiguration ??= await unconfiguredProject.Services.ProjectConfigurationsService.GetProjectConfigurationAsync("Release");
-            ConfiguredProject configuredProject = await unconfiguredProject.LoadConfiguredProjectAsync(projectConfiguration);
+            var configuredProject = await unconfiguredProject.LoadConfiguredProjectAsync(projectConfiguration);
             return configuredProject.Services.ProjectPropertiesProvider.GetCommonProperties();
         }
         catch (Exception exc)
@@ -181,10 +185,10 @@ public static class IdeUtils
 
         try
         {
-            string file = Path.GetTempFileName() + ".txt";
+            var file = Path.GetTempFileName() + ".txt";
             File.WriteAllText(file, output.NormalizeLineEndings());
 
-            ProcessStartInfo psi = new ProcessStartInfo(file);
+            var psi = new ProcessStartInfo(file);
             psi.Verb = "open";
             psi.UseShellExecute = true;
             Process.Start(psi);
@@ -204,7 +208,7 @@ public static class IdeUtils
         {
             // Let's try .asm file and hope VS will be able to apply some highlighting
             // even for JitDump...
-            string file = Path.GetTempFileName() + ".asm";
+            var file = Path.GetTempFileName() + ".asm";
             File.WriteAllText(file, output.NormalizeLineEndings());
 
             DTE().ItemOperations.OpenFile(file);

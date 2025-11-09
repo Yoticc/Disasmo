@@ -14,15 +14,15 @@ public static class LoaderAppManager
 
     private static async Task<string> GetPathToLoader(string tf, Version addinVersion, CancellationToken ct)
     {
-        ProcessResult dotnetVersion = await ProcessUtils.RunProcess("dotnet", "--version", cancellationToken: ct);
+        var dotnetVersion = await ProcessUtils.RunProcess("dotnet", "--version", cancellationToken: ct);
         UserLogger.Log($"dotnet --version: {dotnetVersion.Output} ({dotnetVersion.Error})");
-        string version = dotnetVersion.Output.Trim();
+        var version = dotnetVersion.Output.Trim();
         if (!char.IsDigit(version[0]))
         {
             // Something went wrong, use a random to proceed
             version = Guid.NewGuid().ToString("N");
         }
-        string folderName = $"{addinVersion}_{tf}_{version}";
+        var folderName = $"{addinVersion}_{tf}_{version}";
         UserLogger.Log($"LoaderAppManager.GetPathToLoader: {folderName}");
         return Path.Combine(Path.GetTempPath(), DisasmoLoaderName, folderName);
     }
@@ -43,17 +43,15 @@ public static class LoaderAppManager
             throw new InvalidOperationException("ERROR in LoaderAppManager.GetPathToLoader: " + exc);
         }
 
-        string csproj = Path.Combine(dir, $"{DisasmoLoaderName}.csproj");
-        string csfile = Path.Combine(dir, $"{DisasmoLoaderName}.cs");
-        string outDll = Path.Combine(dir, "out", $"{DisasmoLoaderName}.dll");
-        string outJson = Path.Combine(dir, "out", $"{DisasmoLoaderName}.runtimeconfig.json");
-        string outDllDest = Path.Combine(dest, DisasmoLoaderName + ".dll");
-        string outJsonDest = Path.Combine(dest, DisasmoLoaderName + ".runtimeconfig.json");
+        var csproj = Path.Combine(dir, $"{DisasmoLoaderName}.csproj");
+        var csfile = Path.Combine(dir, $"{DisasmoLoaderName}.cs");
+        var outDll = Path.Combine(dir, "out", $"{DisasmoLoaderName}.dll");
+        var outJson = Path.Combine(dir, "out", $"{DisasmoLoaderName}.runtimeconfig.json");
+        var outDllDest = Path.Combine(dest, DisasmoLoaderName + ".dll");
+        var outJsonDest = Path.Combine(dest, DisasmoLoaderName + ".runtimeconfig.json");
 
         if (File.Exists(outDllDest) && File.Exists(outJsonDest))
-        {
             return;
-        }
 
         if (!Directory.Exists(dir))
         {
@@ -83,8 +81,10 @@ public static class LoaderAppManager
         var msg = await ProcessUtils.RunProcess("dotnet", "build -c Release", workingDir: dir, cancellationToken: ct);
 
         if (!File.Exists(outDll) || !File.Exists(outJson))
+        {
             throw new InvalidOperationException($"ERROR: 'dotnet build' did not produce expected binaries ('{outDll}'" +
                                                 $" and '{outJson}'):\n{msg.Output}\n\n{msg.Error}");
+        }            
 
         ct.ThrowIfCancellationRequested();
         File.Copy(outDll, outDllDest, true);

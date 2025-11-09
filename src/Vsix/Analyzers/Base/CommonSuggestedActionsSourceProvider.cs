@@ -9,7 +9,7 @@ namespace Disasmo.Analyzers;
 [Export(typeof(ISuggestedActionsSourceProvider))]
 [Name("Disasmo Suggested Actions")]
 [ContentType("text")]
-internal class CommonSuggestedActionsSourceProvider : ISuggestedActionsSourceProvider
+public class CommonSuggestedActionsSourceProvider : ISuggestedActionsSourceProvider
 {
     public ISuggestedActionsSource CreateSuggestedActionsSource(ITextView textView, ITextBuffer textBuffer)
     {

@@ -54,9 +54,13 @@ public class IntrinsicsViewModel : ViewModelBase
             Set(ref _input, value);
             StartDownloadSources();
             if (_intrinsics == null || string.IsNullOrWhiteSpace(value) || value.Length < 3)
+            {
                 Suggestions = null;
+            }
             else
+            {
                 Suggestions = _intrinsics.Where(i => i.Contains(value)).Take(15).ToList();
+            }
         }
     }
 

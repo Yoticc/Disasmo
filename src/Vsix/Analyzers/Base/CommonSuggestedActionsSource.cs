@@ -11,7 +11,7 @@ using Microsoft.VisualStudio.Text.Editor;
 
 namespace Disasmo;
 
-internal class CommonSuggestedActionsSource : ISuggestedActionsSource
+public class CommonSuggestedActionsSource : ISuggestedActionsSource
 {
     private BaseSuggestedAction[] _baseActions;
 

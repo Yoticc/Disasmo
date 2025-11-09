@@ -9,7 +9,7 @@ using Document = Microsoft.CodeAnalysis.Document;
 
 namespace Disasmo;
 
-internal class DisasmMethodOrClassAction : BaseSuggestedAction
+public class DisasmMethodOrClassAction : BaseSuggestedAction
 {
     public DisasmMethodOrClassAction(CommonSuggestedActionsSource actionsSource) : base(actionsSource) {}
 
@@ -17,13 +17,13 @@ internal class DisasmMethodOrClassAction : BaseSuggestedAction
     {
         try
         {
-            if (LastDocument != null)
+            if (LastDocument == null)
+                return;
+             
+            var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, cancellationToken);
+            if (window?.ViewModel is {} viewModel)
             {
-                var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, cancellationToken);
-                if (window?.ViewModel is {} viewModel)
-                {
-                    viewModel.RunOperationAsync(await GetSymbol(LastDocument, LastTokenPos, cancellationToken), LastDocument.Project);
-                }
+                viewModel.RunOperationAsync(await GetSymbol(LastDocument, LastTokenPos, cancellationToken), LastDocument.Project);
             }
         }
         catch (Exception exc)
@@ -39,7 +39,7 @@ internal class DisasmMethodOrClassAction : BaseSuggestedAction
             if (Settings.Default.DisableLightBulb)
                 return false;
 
-            SemanticModel semanticModel = await document.GetSemanticModelAsync(cancellationToken);
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
             if (semanticModel == null)
                 return false;
 
@@ -101,13 +101,13 @@ internal class DisasmMethodOrClassAction : BaseSuggestedAction
     {
         try
         {
-            SemanticModel semanticModel = await doc.GetSemanticModelAsync(ct);
+            var semanticModel = await doc.GetSemanticModelAsync(ct);
             if (semanticModel == null)
                 return null;
 
-            SyntaxNode syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(ct);
-            SyntaxToken token = syntaxTree.FindToken(tok);
-            SyntaxNode parent = token.Parent;
+            var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(ct);
+            var token = syntaxTree.FindToken(tok);
+            var parent = token.Parent;
             if (parent == null)
                 return null;
 
@@ -145,6 +145,7 @@ internal class DisasmMethodOrClassAction : BaseSuggestedAction
         {
             if (string.IsNullOrWhiteSpace(DisasmoPackage.HotKey))
                 return "Disasm this";
+
             return $"Disasm this ({DisasmoPackage.HotKey})";
         }
     }

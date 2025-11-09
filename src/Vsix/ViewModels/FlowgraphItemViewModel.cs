@@ -58,7 +58,7 @@ public class FlowgraphItemViewModel : ViewModelBase
             try
             {
                 var img = DotFileUrl + ".png";
-                string dotExeArgs = $"-Tpng -o\"{img}\" -Kdot \"{DotFileUrl}\"";
+                var dotExeArgs = $"-Tpng -o\"{img}\" -Kdot \"{DotFileUrl}\"";
                 await ProcessUtils.RunProcess(_settingsView.GraphvisDotPath, dotExeArgs, cancellationToken: ct);
                 ImageUrl = img;
             }

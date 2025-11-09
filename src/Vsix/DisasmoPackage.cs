@@ -34,30 +34,31 @@ public sealed class DisasmoPackage : AsyncPackage
         try
         {
             Current = this;
-            await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
+            await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             var disasmoCmd = IdeUtils.DTE().Commands.Item("Tools.Disasmo", 0);
-            if (disasmoCmd != null)
+            if (disasmoCmd == null)
+                return;
+
+            var binding = "";
+            if (disasmoCmd.Bindings is object[] bindingArray)
             {
-                string binding = "";
-                if (disasmoCmd.Bindings is object[] bindingArray)
+                var hotkeys = bindingArray.Select(b => b.ToString()).ToArray();
+                // prefer Text Editor over Global
+                var bindingPair = hotkeys.FirstOrDefault(h => h.StartsWith("Text Editor::")) ?? hotkeys.FirstOrDefault();
+                if (bindingPair != null && bindingPair.Contains("::"))
                 {
-                    var hotkeys = bindingArray.Select(b => b.ToString()).ToArray();
-                    // prefer Text Editor over Global
-                    var bindingPair = hotkeys.FirstOrDefault(h => h.StartsWith("Text Editor::")) ?? hotkeys.FirstOrDefault();
-                    if (bindingPair != null && bindingPair.Contains("::"))
-                        binding = bindingPair.Substring(bindingPair.IndexOf("::", StringComparison.Ordinal) + 2);
+                    binding = bindingPair.Substring(bindingPair.IndexOf("::", StringComparison.Ordinal) + 2);
                 }
-                else
-                {
-                    if (disasmoCmd.Bindings is string bindingStr)
-                    {
-                        if (bindingStr.Contains("::"))
-                            binding = bindingStr.Substring(bindingStr.IndexOf("::", StringComparison.Ordinal) + 2);
-                    }
-                }
-                HotKey = binding;
             }
+            else
+            {
+                if (disasmoCmd.Bindings is string bindingStr && bindingStr.Contains("::"))
+                {
+                    binding = bindingStr.Substring(bindingStr.IndexOf("::", StringComparison.Ordinal) + 2);
+                }
+            }
+            HotKey = binding;
         }
         catch
         {
@@ -76,9 +77,9 @@ public sealed class DisasmoPackage : AsyncPackage
 
             // is there an API to do it?
             var client = new HttpClient();
-            string str = await client.GetStringAsync("https://marketplace.visualstudio.com/items?itemName=EgorBogatov.Disasmo");
-            string marker = "extensions/egorbogatov/disasmo/";
-            int index = str.IndexOf(marker);
+            var str = await client.GetStringAsync("https://marketplace.visualstudio.com/items?itemName=EgorBogatov.Disasmo");
+            var marker = "extensions/egorbogatov/disasmo/";
+            var index = str.IndexOf(marker);
             return Version.Parse(str.Substring(index + marker.Length, str.IndexOf('/', index + marker.Length) - index - marker.Length));
         }
         catch { return new Version(0, 0); }
@@ -121,7 +122,6 @@ public class DisasmoCommandBinding
     internal CommandBindingDefinition disasmoCommandBinding;
 }
 
-
 [Export(typeof(ICommandHandler))]
 [ContentType("text")]
 [Name(nameof(DisasmoCommandHandler))]
@@ -129,10 +129,7 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
 {
     public string DisplayName => "Disasmo this";
 
-    public CommandState GetCommandState(DisasmoCommandArgs args)
-    {
-        return CommandState.Available;
-    }
+    public CommandState GetCommandState(DisasmoCommandArgs args) => CommandState.Available;
 
     public int GetCaretPosition(ITextView view)
     {
@@ -166,7 +163,9 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
                             MessageBox.Show("Disasmo is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
                             return;
                         }
+
                         await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync();
+
                         var symbol = await DisasmMethodOrClassAction.GetSymbolStatic(document, pos, default, true);
                         var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, default);
                         if (window?.ViewModel is {} viewModel)
@@ -179,9 +178,11 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
                         Debug.WriteLine(exc);
                     }
                 }
+
                 ThreadPool.QueueUserWorkItem(CallBack);
             }
         }
+
         return true;
     }
 }

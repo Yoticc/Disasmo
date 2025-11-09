@@ -13,7 +13,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Disasmo;
 
-internal abstract class BaseSuggestedAction : ISuggestedAction
+public abstract class BaseSuggestedAction : ISuggestedAction
 {
     protected readonly CommonSuggestedActionsSource _actionsSource;
 
@@ -46,18 +46,31 @@ internal abstract class BaseSuggestedAction : ISuggestedAction
     }
 
     public int LastTokenPos { get; set; }
+
     public Document LastDocument { get; set; }
-    protected abstract Task<bool> IsValidSymbol(Document document, int tokenPosition, CancellationToken cancellationToken);
+
     public abstract string DisplayText { get; }
+
     public string IconAutomationText => "Disamo";
-    ImageMoniker ISuggestedAction.IconMoniker => KnownMonikers.CSLightswitch;
+
     public string InputGestureText => null;
+
     public bool HasActionSets => false;
-    public Task<IEnumerable<SuggestedActionSet>> GetActionSetsAsync(CancellationToken cancellationToken) => null;
+
     public bool HasPreview => false;
+
+    ImageMoniker ISuggestedAction.IconMoniker => KnownMonikers.CSLightswitch;
+
+    protected abstract Task<bool> IsValidSymbol(Document document, int tokenPosition, CancellationToken cancellationToken);
+
+    public Task<IEnumerable<SuggestedActionSet>> GetActionSetsAsync(CancellationToken cancellationToken) => null;
+
     public Task<object> GetPreviewAsync(CancellationToken cancellationToken) => Task.FromResult<object>(null);
+
     public void Dispose() { }
+
     public abstract void Invoke(CancellationToken cancellationToken);
+
     public bool TryGetTelemetryId(out Guid telemetryId)
     {
         telemetryId = Guid.Empty;

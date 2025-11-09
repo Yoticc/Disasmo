@@ -30,10 +30,7 @@ public class TfmVersion : IComparable<TfmVersion>
         return Nullable.Compare(Patch, other.Patch);
     }
 
-    public override string ToString()
-    {
-        return $"{Moniker} {Major}.{Minor}.{Patch}";
-    }
+    public override string ToString() => $"{Moniker} {Major}.{Minor}.{Patch}";
 
     public static TfmVersion Parse(string tfm)
     {

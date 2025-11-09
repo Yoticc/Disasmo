@@ -31,6 +31,7 @@ public static class DisassemblyPrettifier
     {
         if (!minimalComments)
             return rawAsm;
+
         try
         { 
             var lines = rawAsm.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
@@ -42,14 +43,19 @@ public static class DisassemblyPrettifier
             foreach (var line in lines)
             {
                 if (line.Contains("; Assembly listing for method "))
+                {
                     currentMethod = line.Remove(0, "; Assembly listing for method ".Length);
+                }
                 else if (currentMethod == "")
+                {
                     return rawAsm; // in case if format is changed
+                }
 
                 var currentBlock = BlockType.Unknown;
-
                 if (line.StartsWith(";"))
+                {
                     currentBlock = BlockType.Comments;
+                }
                 else if (string.IsNullOrWhiteSpace(line))
                 {
                     continue;
@@ -69,7 +75,9 @@ public static class DisassemblyPrettifier
                     prevBlock = currentBlock;
                 }
                 else
+                {
                     blocks[blocks.Count - 1].Data += line + "\n";
+                }
             }
 
             var blocksByMethods = blocks.GroupBy(b => b.MethodName);
@@ -77,9 +85,9 @@ public static class DisassemblyPrettifier
 
             foreach (var method in blocksByMethods)
             {
-                List<Block> methodBlocks = method.ToList();
+                var methodBlocks = method.ToList();
 
-                int size = ParseMethodTotalSizes(methodBlocks);
+                var size = ParseMethodTotalSizes(methodBlocks);
 
                 if (minimalComments)
                 {
@@ -110,11 +118,13 @@ public static class DisassemblyPrettifier
     private static int ParseMethodTotalSizes(List<Block> methodBlocks)
     {
         const string marker = "; Total bytes of code ";
-        string lineToParse = methodBlocks.First(b => b.Data.Contains(marker)).Data;
-        int comma = lineToParse.IndexOf(',');
-        string size = comma == -1 ? 
+
+        var lineToParse = methodBlocks.First(b => b.Data.Contains(marker)).Data;
+        var comma = lineToParse.IndexOf(',');
+        var size = comma == -1 ? 
             lineToParse.Substring(marker.Length) : 
             lineToParse.Substring(marker.Length, lineToParse.IndexOf(',') - marker.Length);
+
         return int.Parse(size);
     }
 
