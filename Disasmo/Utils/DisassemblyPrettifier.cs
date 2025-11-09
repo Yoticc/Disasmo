@@ -24,7 +24,7 @@ public static class DisassemblyPrettifier
     ///   G_M42249_IG03:
     ///          C3               ret
     ///        
-    ///   ; Total bytes of code 76, prolog size 5 for method Program:SelectBucketIndex_old(int):int
+    ///   ; Total bytes of code 76, prolog size 5, PerfScore 41.52, instruction count 3, bla-bla for method Program:MyMethod():int (Tier0)
     ///   ; ============================================================
     /// </summary>
     public static string Prettify(string rawAsm, bool minimalComments)
