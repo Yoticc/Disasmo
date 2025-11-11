@@ -111,7 +111,7 @@ public static class IdeUtils
         try
         {
             // Copied from https://github.com/madskristensen/FileDiffer/blob/main/src/Commands/DiffFilesCommand.cs#L48-L56 (c) madskristensen
-            var args = $"\"{tmpFileLeft}\" \"{tmpFileRight}\"";
+            object args = $"\"{tmpFileLeft}\" \"{tmpFileRight}\"";
             ((DTE)Package.GetGlobalService(typeof(SDTE))).Commands.Raise("5D4C0442-C0A2-4BE8-9B4D-AB1C28450942", 256, ref args, ref args);
         }
         catch (Exception exc)

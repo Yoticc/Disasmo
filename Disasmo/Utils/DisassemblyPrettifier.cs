@@ -29,26 +29,29 @@ public static class DisassemblyPrettifier
     /// </summary>
     public static string Prettify(string rawAsm, bool minimalComments)
     {
+        const string MethodStartedMarker = "; Assembly listing for method ";
+
         if (!minimalComments)
             return rawAsm;
 
         try
-        { 
-            var lines = rawAsm.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        {
+            var lines = rawAsm.Split(["\r\n", "\n", "\t"], StringSplitOptions.RemoveEmptyEntries);
             var blocks = new List<Block>();
 
             var prevBlock = BlockType.Unknown;
-            var currentMethod = "";
+            var currentMethod = string.Empty;
 
             foreach (var line in lines)
             {
-                if (line.Contains("; Assembly listing for method "))
+                if (line.StartsWith(MethodStartedMarker))
                 {
-                    currentMethod = line.Remove(0, "; Assembly listing for method ".Length);
+                    currentMethod = line.Remove(0, MethodStartedMarker.Length);
                 }
-                else if (currentMethod == "")
+                else if (currentMethod == string.Empty) // In case disasm's output format has changed
                 {
-                    return rawAsm; // in case if format is changed
+                    Log($"Changed disasm's output format was detected.");
+                    return rawAsm;
                 }
 
                 var currentBlock = BlockType.Unknown;
@@ -60,7 +63,7 @@ public static class DisassemblyPrettifier
                 {
                     continue;
                 }
-                else 
+                else
                 {
                     currentBlock = BlockType.Code;
                     if (Regex.IsMatch(line, @"^\w+:"))
@@ -71,12 +74,18 @@ public static class DisassemblyPrettifier
 
                 if (currentBlock != prevBlock)
                 {
-                    blocks.Add(new Block { MethodName = currentMethod, Type = currentBlock,  Data = $"\n{line}\n" });
+                    var block = new Block(methodName: currentMethod, type: currentBlock);
+                    var data = block.MutableData;
+                    data.AppendLine().Append(line).AppendLine();
+
+                    blocks.Add(block);
                     prevBlock = currentBlock;
                 }
                 else
                 {
-                    blocks[blocks.Count - 1].Data += line + "\n";
+                    var block = blocks[blocks.Count - 1];
+                    var data = block.MutableData;
+                    data.Append(line).AppendLine();
                 }
             }
 
@@ -85,48 +94,50 @@ public static class DisassemblyPrettifier
 
             foreach (var method in blocksByMethods)
             {
-                var methodBlocks = method.ToList();
+                var methodBlocks = (IEnumerable<Block>)method;
 
                 var size = ParseMethodTotalSizes(methodBlocks);
 
-                if (minimalComments)
-                {
-                    methodBlocks = methodBlocks.Where(m => m.Type != BlockType.Comments).ToList();
-                    output.Append($"; Method {method.Key}");
-                }
+                methodBlocks = methodBlocks.Where(m => m.Type != BlockType.Comments);
+                output.Append($"; Method {method.Key}");
 
                 foreach (var block in methodBlocks)
-                    output.Append(block.Data);
+                    output.Append(block.ImmutableData);
 
-                if (minimalComments)
-                {
-                    output.Append("; Total bytes of code: ")
-                        .Append(size)
-                        .AppendLine()
-                        .AppendLine();
-                }
+                output.Append("; Total bytes of code: ")
+                    .Append(size)
+                    .AppendLine()
+                    .AppendLine();
             }
 
             return output.ToString();
         }
-        catch
+        catch (Exception ex) when (ex is not MemberAccessException) // In case disasm's output format has changed
         {
-            return rawAsm; // format is changed - leave it as is
+            Log($"Exception. Disasm's output format may have changed.");
         }
+        catch { }
+
+        return rawAsm; 
+
+        static int ParseMethodTotalSizes(IEnumerable<Block> methodBlocks)
+        {
+            const string Marker = "; Total bytes of code ";
+
+            var lineToParse = methodBlocks.Last().ImmutableData;
+
+            var sizePartStartIndex = lineToParse.IndexOf(Marker) + Marker.Length;
+            var commaIndex = lineToParse.IndexOf(',', sizePartStartIndex);
+
+            var sizePartString = commaIndex == -1 ?
+                lineToParse.Substring(sizePartStartIndex) :
+                lineToParse.Substring(sizePartStartIndex, commaIndex - sizePartStartIndex);
+
+            return int.Parse(sizePartString);
+        }   
     }
 
-    private static int ParseMethodTotalSizes(List<Block> methodBlocks)
-    {
-        const string marker = "; Total bytes of code ";
-
-        var lineToParse = methodBlocks.First(b => b.Data.Contains(marker)).Data;
-        var comma = lineToParse.IndexOf(',');
-        var size = comma == -1 ? 
-            lineToParse.Substring(marker.Length) : 
-            lineToParse.Substring(marker.Length, lineToParse.IndexOf(',') - marker.Length);
-
-        return int.Parse(size);
-    }
+    private static void Log(string message) => UserLogger.Log($"[{nameof(DisassemblyPrettifier)}] {message}");
 
     private enum BlockType
     {
@@ -137,8 +148,52 @@ public static class DisassemblyPrettifier
 
     private class Block
     {
-        public string MethodName { get; set; }
-        public BlockType Type { get; set; }
-        public string Data { get; set; }
+        public Block(string methodName, BlockType type)
+        {
+            MethodName = methodName;
+            Type = type;
+
+            _mutableData = new StringBuilder(64);
+        }
+
+        private StringBuilder _mutableData;
+        private string _immutableData;
+
+        public string MethodName { get; private set; }
+        public BlockType Type { get; private set; }
+
+        public StringBuilder MutableData
+        {
+            get
+            {
+                if (_mutableData == null)
+                {
+                    var message = "Undefined behavior was detected. An attempt was made to access cleared data.";
+
+                    Log($"Exception. {message}");
+                    throw new MemberAccessException(message);
+                }
+
+                return _mutableData;
+            }
+        }
+
+        public string ImmutableData
+        {
+            get
+            {
+                if (_immutableData == null)
+                {
+                    _immutableData = _mutableData.ToString();
+
+                    // Clear the mutable string field after accessing the immutable string field for the first time
+                    _mutableData = null;
+                }
+
+                return _immutableData;
+            } 
+        }
+
+        private static void Log(string message) => UserLogger.Log($"[{typeof(DisassemblyPrettifier)}.{typeof(Block)}] {message}");
     }
 }

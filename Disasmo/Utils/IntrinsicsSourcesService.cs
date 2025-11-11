@@ -112,7 +112,6 @@ public static class IntrinsicsSourcesService
     }
 }
 
-
 public class IntrinsicsInfo
 {
     public string Comments { get; set; }
