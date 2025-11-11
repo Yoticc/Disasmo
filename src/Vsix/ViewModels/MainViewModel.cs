@@ -157,7 +157,7 @@ public class MainViewModel : ViewModelBase
     {
         try
         {
-            if (_currentSymbol == null || string.IsNullOrWhiteSpace(_currentProjectPath))
+            if (_currentSymbol is null || string.IsNullOrWhiteSpace(_currentProjectPath))
                 return;
 
             await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -176,7 +176,7 @@ public class MainViewModel : ViewModelBase
 
             try
             {
-                if (projectProperties != null)
+                if (projectProperties is not null)
                 {
                     var customAsmName = await projectProperties.GetEvaluatedPropertyValueAsync("AssemblyName");
                     if (!string.IsNullOrWhiteSpace(customAsmName))
@@ -553,7 +553,7 @@ public class MainViewModel : ViewModelBase
     private UnconfiguredProject GetUnconfiguredProject(Project project)
     {
         var context = project as IVsBrowseObjectContext;
-        if (context == null && project != null) 
+        if (context is null && project is not null) 
             context = project.Object as IVsBrowseObjectContext;
 
         return context?.UnconfiguredProject;
@@ -643,7 +643,7 @@ public class MainViewModel : ViewModelBase
             _currentProject = project;
             Output = "";
 
-            if (symbol == null)
+            if (symbol is null)
             {
                 Output = "Symbol is not recognized, put cursor on a function/class name";
                 return;
@@ -670,7 +670,7 @@ public class MainViewModel : ViewModelBase
 
             // Find Release-{SettingsViewModel.Arch} configuration:
             var currentProject = dte.GetActiveProject(project.FilePath);
-            if (currentProject == null)
+            if (currentProject is null)
             {
                 Output = "There no active project. Please re-open solution.";
                 return;
@@ -711,7 +711,7 @@ public class MainViewModel : ViewModelBase
                 var currentTfmVersion = TfmVersion.Parse(_currentTf);
                 // find the best suitable project configuration
                 projectConfiguration = projectConfigurations
-                    .FirstOrDefault(cfg => currentTfmVersion != null && currentTfmVersion.CompareTo(IdeUtils.GetTargetFrameworkVersionDimension(cfg)) >= 0)
+                    .FirstOrDefault(cfg => currentTfmVersion is not null && currentTfmVersion.CompareTo(IdeUtils.GetTargetFrameworkVersionDimension(cfg)) >= 0)
                     ?? projectConfigurations.FirstOrDefault();
             }
 
@@ -719,10 +719,10 @@ public class MainViewModel : ViewModelBase
             ThrowIfCanceled();
 
             // resolve target framework
-            if (_currentTf == null)
+            if (_currentTf is null)
             {
                 int? major;
-                if (projectProperties != null)
+                if (projectProperties is not null)
                 {
                     _currentTf = await projectProperties.GetEvaluatedPropertyValueAsync("TargetFramework");
                     major = TfmVersion.Parse(_currentTf)?.Major;
@@ -813,7 +813,7 @@ public class MainViewModel : ViewModelBase
                 }
             }
 
-            var outputDir = projectProperties == null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
+            var outputDir = projectProperties is null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
             DisasmoOutDir = Path.Combine(outputDir, DisasmoFolder + (SettingsVm.UseDotnetPublishForReload ? "_published" : ""));
             var currentProjectDirPath = Path.GetDirectoryName(_currentProjectPath);
 

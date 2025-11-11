@@ -30,7 +30,7 @@ public abstract class BaseSuggestedAction : ISuggestedAction
             LastDocument = null;
             LastTokenPos = 0;
             var document = SnapshotSpan.Snapshot.TextBuffer.GetRelatedDocuments().FirstOrDefault();
-            if (document != null && await IsValidSymbol(document, CaretPosition, cancellationToken))
+            if (document is not null && await IsValidSymbol(document, CaretPosition, cancellationToken))
             {
                 LastDocument = document;
                 LastTokenPos = CaretPosition;

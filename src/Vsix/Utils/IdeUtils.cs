@@ -21,7 +21,7 @@ public static class IdeUtils
     public static Project GetActiveProject(this DTE dte, string filePath)
     {
         // find project by full name
-        if (dte.Solution != null)
+        if (dte.Solution is not null)
         {
             foreach (var projectObject in dte.Solution.Projects)
             {
@@ -33,7 +33,7 @@ public static class IdeUtils
         }
 
         var activeSolutionProjects = dte.ActiveSolutionProjects as Array;
-        if (activeSolutionProjects != null && activeSolutionProjects.Length > 0)
+        if (activeSolutionProjects is not null && activeSolutionProjects.Length > 0)
             return activeSolutionProjects.GetValue(0) as Project;
 
         return null;
@@ -68,7 +68,7 @@ public static class IdeUtils
     {
         try
         {
-            if (DisasmoPackage.Current == null)
+            if (DisasmoPackage.Current is null)
             {
                 MessageBox.Show("DisasmoPackage is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
                 return null;
@@ -142,7 +142,7 @@ public static class IdeUtils
     public static TfmVersion GetTargetFrameworkVersionDimension(ProjectConfiguration projectConfiguration)
     {
         var targetFramework = GetTargetFrameworkDimension(projectConfiguration);
-        return targetFramework != null ? TfmVersion.Parse(targetFramework) : null;
+        return targetFramework is not null ? TfmVersion.Parse(targetFramework) : null;
     }
 
     public static async Task<IProjectProperties> GetProjectProperties(UnconfiguredProject unconfiguredProject, ProjectConfiguration projectConfiguration)

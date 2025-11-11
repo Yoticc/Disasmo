@@ -17,7 +17,7 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
     {
         try
         {
-            if (LastDocument == null)
+            if (LastDocument is null)
                 return;
              
             var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, cancellationToken);
@@ -40,7 +40,7 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
                 return false;
 
             var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
-            if (semanticModel == null)
+            if (semanticModel is null)
                 return false;
 
             var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(cancellationToken);
@@ -102,26 +102,26 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
         try
         {
             var semanticModel = await doc.GetSemanticModelAsync(ct);
-            if (semanticModel == null)
+            if (semanticModel is null)
                 return null;
 
             var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(ct);
             var token = syntaxTree.FindToken(tok);
             var parent = token.Parent;
-            if (parent == null)
+            if (parent is null)
                 return null;
 
             var symbol = FindRelatedSymbol(semanticModel, parent, true, ct);
-            if (symbol == null && recursive)
+            if (symbol is null && recursive)
             {
                 while (true)
                 {
                     parent = parent?.Parent;
-                    if (parent == null)
+                    if (parent is null)
                         return null;
 
                     symbol = FindRelatedSymbol(semanticModel, parent, false, ct);
-                    if (symbol != null)
+                    if (symbol is not null)
                     {
                         return symbol;
                     }

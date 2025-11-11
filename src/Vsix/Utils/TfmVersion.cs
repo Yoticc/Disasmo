@@ -16,7 +16,7 @@ public class TfmVersion : IComparable<TfmVersion>
 
     public int CompareTo(TfmVersion other)
     {
-        if (other == null)
+        if (other is null)
             return 1;
 
         var majorCmp = Nullable.Compare(Major, other.Major);

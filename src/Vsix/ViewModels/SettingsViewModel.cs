@@ -156,12 +156,12 @@ public class SettingsViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(_pathToLocalCoreClr))
         {
             var jitDir = FindJitDirectory(_pathToLocalCoreClr);
-            if (jitDir != null)
+            if (jitDir is not null)
             {
                 string[] jits = Directory.GetFiles(jitDir, "clrjit*.dll");
                 CustomJits = new ObservableCollection<string>(jits.Select(Path.GetFileName));
                 SelectedCustomJit = CustomJits.FirstOrDefault(j => j == DefaultJit);
-                if (SelectedCustomJit != null)
+                if (SelectedCustomJit is not null)
                 {
                     CustomJits.Add(Crossgen);
                     CustomJits.Add(Ilc);

@@ -166,7 +166,7 @@ public static class DisassemblyPrettifier
         {
             get
             {
-                if (_mutableData == null)
+                if (_mutableData is null)
                 {
                     var message = "Undefined behavior was detected. An attempt was made to access cleared data.";
 
@@ -182,7 +182,7 @@ public static class DisassemblyPrettifier
         {
             get
             {
-                if (_immutableData == null)
+                if (_immutableData is null)
                 {
                     _immutableData = _mutableData.ToString();
 

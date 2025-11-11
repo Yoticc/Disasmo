@@ -53,7 +53,7 @@ public class IntrinsicsViewModel : ViewModelBase
         {
             Set(ref _input, value);
             StartDownloadSources();
-            if (_intrinsics == null || string.IsNullOrWhiteSpace(value) || value.Length < 3)
+            if (_intrinsics is null || string.IsNullOrWhiteSpace(value) || value.Length < 3)
             {
                 Suggestions = null;
             }

@@ -44,7 +44,7 @@ public class CommonSuggestedActionsSource : ISuggestedActionsSource
         try
         {
             return _baseActions
-                .Where(a => a.LastDocument != null)
+                .Where(a => a.LastDocument is not null)
                 .Select(a =>
                 {
                     a.SnapshotSpan = range;

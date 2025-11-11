@@ -34,10 +34,10 @@ public static class ProcessUtils
                 Arguments = args,
             };
 
-            if (workingDir != null)
+            if (workingDir is not null)
                 processStartInfo.WorkingDirectory = workingDir;
 
-            if (envVars != null)
+            if (envVars is not null)
             {
                 foreach (var envVar in envVars)
                     processStartInfo.EnvironmentVariables[envVar.Key] = envVar.Value;
@@ -97,7 +97,7 @@ public static class ProcessUtils
 
     private static void KillProccessSafe(this Process process)
     {
-        if (process == null)
+        if (process is null)
             return;
 
         try
@@ -113,7 +113,7 @@ public static class ProcessUtils
 
     private static string DumpEnvVars(Dictionary<string, string> envVars)
     {
-        if (envVars == null)
+        if (envVars is null)
             return "";
 
         var envVar = "";

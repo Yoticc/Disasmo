@@ -37,7 +37,7 @@ public sealed class DisasmoPackage : AsyncPackage
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
             var disasmoCmd = IdeUtils.DTE().Commands.Item("Tools.Disasmo", 0);
-            if (disasmoCmd == null)
+            if (disasmoCmd is null)
                 return;
 
             var binding = "";
@@ -46,7 +46,7 @@ public sealed class DisasmoPackage : AsyncPackage
                 var hotkeys = bindingArray.Select(b => b.ToString()).ToArray();
                 // prefer Text Editor over Global
                 var bindingPair = hotkeys.FirstOrDefault(h => h.StartsWith("Text Editor::")) ?? hotkeys.FirstOrDefault();
-                if (bindingPair != null && bindingPair.Contains("::"))
+                if (bindingPair is not null && bindingPair.Contains("::"))
                 {
                     binding = bindingPair.Substring(bindingPair.IndexOf("::", StringComparison.Ordinal) + 2);
                 }
@@ -149,7 +149,7 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
         IdeUtils.DTE().SaveActiveDocument();
 
         var document = args.TextView?.TextBuffer?.GetRelatedDocuments()?.FirstOrDefault();
-        if (document != null)
+        if (document is not null)
         {
             var pos = GetCaretPosition(args.TextView);
             if (pos != -1)
@@ -158,7 +158,7 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
                 {
                     try
                     {
-                        if (DisasmoPackage.Current == null)
+                        if (DisasmoPackage.Current is null)
                         {
                             MessageBox.Show("Disasmo is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
                             return;

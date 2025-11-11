@@ -13,7 +13,7 @@ public class CommonSuggestedActionsSourceProvider : ISuggestedActionsSourceProvi
 {
     public ISuggestedActionsSource CreateSuggestedActionsSource(ITextView textView, ITextBuffer textBuffer)
     {
-        if (textBuffer == null && textView == null)
+        if (textBuffer is null && textView is null)
             return null;
 
         return new CommonSuggestedActionsSource(this, textView, textBuffer);
