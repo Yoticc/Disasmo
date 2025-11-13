@@ -1,9 +1,10 @@
-﻿using System;
+﻿using Disasmo.Utils;
+using GalaSoft.MvvmLight;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Disasmo.Utils;
-using GalaSoft.MvvmLight;
+using System.Threading.Tasks;
 
 namespace Disasmo.ViewModels;
 
@@ -22,7 +23,7 @@ public class IntrinsicsViewModel : ViewModelBase
         set => Set(ref _isBusy, value);
     }
 
-    private async void StartDownloadSources()
+    private async Task FetchSourcesAsync()
     {
         if (IsInDesignMode || _isDownloading || _intrinsics?.Any() == true)
             return;
@@ -31,11 +32,8 @@ public class IntrinsicsViewModel : ViewModelBase
         _isDownloading = true;
         try
         {
-            _intrinsics = await IntrinsicsSourcesService.ParseIntrinsics(file =>
-                {
-                    LoadingStatus = "Loading data from Github...\nParsing " + file;
-                });
-            
+            _intrinsics = await IntrinsicsSourcesService.ParseIntrinsics(statusMessage => LoadingStatus = statusMessage);
+            UpdateSuggestions();
         }
         catch (Exception ex)
         {
@@ -44,6 +42,7 @@ public class IntrinsicsViewModel : ViewModelBase
             
         IsBusy = false;
         _isDownloading = false;
+        return;
     }
 
     public string Input
@@ -52,16 +51,20 @@ public class IntrinsicsViewModel : ViewModelBase
         set
         {
             Set(ref _input, value);
-            StartDownloadSources();
-            if (_intrinsics is null || string.IsNullOrWhiteSpace(value) || value.Length < 3)
-            {
-                Suggestions = null;
-            }
-            else
-            {
-                Suggestions = _intrinsics.Where(i => i.Contains(value)).Take(15).ToList();
-            }
+            FetchSourcesAsync();
+            UpdateSuggestions();
         }
+    }
+
+    private void UpdateSuggestions()
+    {
+        if (_intrinsics is null || _input.Length < 3)
+        {
+            Suggestions = null;
+            return;
+        }
+
+        Suggestions = _intrinsics.Where(i => i.Contains(_input)).Take(15).ToList();
     }
 
     public string LoadingStatus
