@@ -27,10 +27,7 @@ public class CommonSuggestedActionsSource : ISuggestedActionsSource
         SourceProvider = sourceProvider;
         TextView = textView;
         TextBuffer = textBuffer;
-        _baseActions = new BaseSuggestedAction[]
-            {
-                new DisasmMethodOrClassAction(this),
-            };
+        _baseActions = [new DisasmMethodOrClassAction(this)];
     }
 
     public event EventHandler<EventArgs> SuggestedActionsChanged;
@@ -38,18 +35,19 @@ public class CommonSuggestedActionsSource : ISuggestedActionsSource
     public void Dispose() { }
 
     public IEnumerable<SuggestedActionSet> GetSuggestedActions(
-        ISuggestedActionCategorySet requestedActionCategories, SnapshotSpan range,
+        ISuggestedActionCategorySet requestedActionCategories, 
+        SnapshotSpan range,
         CancellationToken cancellationToken)
     {
         try
         {
             return _baseActions
-                .Where(a => a.LastDocument is not null)
-                .Select(a =>
+                .Where(action => action.LastDocument is not null)
+                .Select(action =>
                 {
-                    a.SnapshotSpan = range;
-                    a.CaretPosition = GetCaretPosition();
-                    return new SuggestedActionSet(PredefinedSuggestedActionCategoryNames.Any, new[] { a });
+                    action.SnapshotSpan = range;
+                    action.CaretPosition = GetCaretPosition();
+                    return new SuggestedActionSet(PredefinedSuggestedActionCategoryNames.Any, [action]);
                 }).ToArray();
         }
         catch
@@ -58,19 +56,20 @@ public class CommonSuggestedActionsSource : ISuggestedActionsSource
         }
     }
 
-    public async Task<bool> HasSuggestedActionsAsync(ISuggestedActionCategorySet requestedActionCategories,
-        SnapshotSpan range, CancellationToken cancellationToken)
+    public async Task<bool> HasSuggestedActionsAsync(
+        ISuggestedActionCategorySet requestedActionCategories,
+        SnapshotSpan range, 
+        CancellationToken cancellationToken)
     {
         try
         {
-            foreach (var t in _baseActions)
+            foreach (var action in _baseActions)
             {
-                t.SnapshotSpan = range;
-                t.CaretPosition = GetCaretPosition();
-                if (await t.ValidateAsync(default))
-                {
+                action.SnapshotSpan = range;
+                action.CaretPosition = GetCaretPosition();
+
+                if (await action.ValidateAsync(default))
                     return true;
-                }
             }
         }
         catch (Exception ex)

@@ -13,11 +13,11 @@ public static class ProcessUtils
         string path,
         string args = "", 
         Dictionary<string, string> envVars = null, 
-        string workingDir = null, 
+        string workingDirectory = null, 
         Action<bool, string> outputLogger = null, 
         CancellationToken cancellationToken = default)
     {
-        UserLogger.Log($"\nExecuting a command in directory \"{workingDir}\":\n\t{path} {args}\nEnv.vars:\n{DumpEnvVars(envVars)}");
+        UserLogger.Log($"\nExecuting a command in directory \"{workingDirectory}\":\n\t{path} {args}\nEnv.vars:\n{DumpEnvVars(envVars)}");
 
         var logger = new StringBuilder();
         var loggerForErrors = new StringBuilder();
@@ -34,8 +34,8 @@ public static class ProcessUtils
                 Arguments = args,
             };
 
-            if (workingDir is not null)
-                processStartInfo.WorkingDirectory = workingDir;
+            if (workingDirectory is not null)
+                processStartInfo.WorkingDirectory = workingDirectory;
 
             if (envVars is not null)
             {
@@ -69,9 +69,12 @@ public static class ProcessUtils
 
             return new ProcessResult { Error = loggerForErrors.ToString().Trim('\r', '\n'), Output = logger.ToString().Trim('\r', '\n') };
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            return new ProcessResult { Error = $"RunProcess failed:{e.Message}.\npath={path}\nargs={args}\nworkingdir={workingDir ?? Environment.CurrentDirectory}\n{loggerForErrors}" };
+            workingDirectory ??= Environment.CurrentDirectory;
+            var errorMessage = $"RunProcess failed:{ex.Message}.\npath={path}\nargs={args}\nworkingdir={workingDirectory}\n{loggerForErrors}";
+
+            return new ProcessResult { Error = errorMessage };
         }
         finally
         {
@@ -85,14 +88,14 @@ public static class ProcessUtils
         if (process.HasExited) 
             return Task.CompletedTask;
 
-        var tcs = new TaskCompletionSource<object>();
+        var completionSource = new TaskCompletionSource<object>();
         process.EnableRaisingEvents = true;
-        process.Exited += (sender, args) => tcs.TrySetResult(null);
+        process.Exited += (sender, args) => completionSource.TrySetResult(null);
 
         if (cancellationToken != default)
-            cancellationToken.Register(() => tcs.TrySetCanceled());
+            cancellationToken.Register(() => completionSource.TrySetCanceled());
 
-        return process.HasExited ? Task.CompletedTask : tcs.Task;
+        return process.HasExited ? Task.CompletedTask : completionSource.Task;
     }
 
     private static void KillProccessSafe(this Process process)
@@ -105,9 +108,9 @@ public static class ProcessUtils
             if (!process.HasExited)
                 process.Kill();
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 

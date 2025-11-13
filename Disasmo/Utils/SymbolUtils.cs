@@ -6,25 +6,25 @@ public static class SymbolUtils
 {
     public static DisasmoSymbolInfo FromSymbol(ISymbol symbol)
     {
-        string target;
         string hostType;
+        string target;
         string methodName;
 
         var prefix = "";
         var containingType = symbol as ITypeSymbol ?? symbol.ContainingType;
 
-        // match all for nested types
-        if (containingType.ContainingType is { })
+        // Match all for nested types
+        if (containingType.ContainingType is not null)
         {
             prefix = "*";
         }
         else
         {
-            var ns = containingType.ContainingNamespace;
-            while (ns?.Name is { Length: > 0 } containingNamespace)
+            var @namespace = containingType.ContainingNamespace;
+            while (@namespace?.Name is { Length: > 0 } containingNamespace)
             {
                 prefix = containingNamespace + "." + prefix;
-                ns = ns.ContainingNamespace;
+                @namespace = @namespace.ContainingNamespace;
             }
         }
 
@@ -33,39 +33,37 @@ public static class SymbolUtils
         if (containingType is INamedTypeSymbol { IsGenericType: true })
             prefix += "*";
 
-        if (symbol is IMethodSymbol ms)
+        if (symbol is IMethodSymbol methodSymbol)
         {
-            if (ms.MethodKind == MethodKind.LocalFunction)
+            hostType = symbol.ContainingType.ToString();
+            if (methodSymbol.MethodKind == MethodKind.LocalFunction)
             {
-                // hack for mangled names
+                // Hack for mangled names
                 target = prefix + ":*" + symbol.MetadataName + "*";
-                hostType = symbol.ContainingType.ToString();
                 methodName = "*";
             }
-            else if (ms.MethodKind == MethodKind.Constructor)
+            else if (methodSymbol.MethodKind == MethodKind.Constructor)
             {
                 target = prefix + ":.ctor";
-                hostType = symbol.ContainingType.ToString();
                 methodName = "*";
             }
             else
             {
                 target = prefix + ":" + symbol.MetadataName;
-                hostType = symbol.ContainingType.ToString();
                 methodName = symbol.MetadataName;
             }
         }
         else if (symbol is IPropertySymbol)
         {
-            target = prefix + ":get_" + symbol.MetadataName + " " + prefix + ":set_" + symbol.MetadataName;
             hostType = symbol.ContainingType.ToString();
+            target = prefix + ":get_" + symbol.MetadataName + " " + prefix + ":set_" + symbol.MetadataName;
             methodName = symbol.MetadataName;
         }
         else
         {
-            // the whole class
-            target = prefix + ":*";
+            // The whole class
             hostType = symbol.ToString();
+            target = prefix + ":*";
             methodName = "*";
         }
 

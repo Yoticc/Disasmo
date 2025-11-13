@@ -20,7 +20,7 @@ public static class IdeUtils
 
     public static Project GetActiveProject(this DTE dte, string filePath)
     {
-        // find project by full name
+        // Find project by full name
         if (dte.Solution is not null)
         {
             foreach (var projectObject in dte.Solution.Projects)
@@ -45,9 +45,9 @@ public static class IdeUtils
         {
             dte.ActiveDocument?.Save();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.WriteLine(e);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -58,9 +58,9 @@ public static class IdeUtils
             foreach (Document document in dte.Documents)
                 document?.Save();
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Debug.WriteLine(e);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -80,7 +80,7 @@ public static class IdeUtils
             if (tryTwice)
             {
                 await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
-                // no idea why I have to call it twice, it doesn't work if I do it only once on the first usage
+                // No idea why I have to call it twice, it doesn't work if I do it only once on the first usage
                 window = await DisasmoPackage.Current.ShowToolWindowAsync(typeof(T), 0, create: true, cancellationToken: cancellationToken);
                 await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
             }
@@ -99,29 +99,29 @@ public static class IdeUtils
         contentRight = string.IsNullOrEmpty(contentRight) ? " " : contentRight;
 
         var tempPath = Path.GetTempPath();
-        var diffDir = Path.Combine(tempPath, "Disasmo_diffs_" + Guid.NewGuid().ToString("N").Substring(0, 10));
-        Directory.CreateDirectory(diffDir);
+        var diffDirectory = Path.Combine(tempPath, "Disasmo_diffs_" + Guid.NewGuid().ToString("N").Substring(0, 10));
+        Directory.CreateDirectory(diffDirectory);
 
-        var tmpFileLeft = Path.Combine(diffDir, "previous.asm");
-        var tmpFileRight = Path.Combine(diffDir, "current.asm");
+        var tempFileLeft = Path.Combine(diffDirectory, "previous.asm");
+        var tempFileRight = Path.Combine(diffDirectory, "current.asm");
 
-        File.WriteAllText(tmpFileLeft, contentLeft.NormalizeLineEndings());
-        File.WriteAllText(tmpFileRight, contentRight.NormalizeLineEndings());
+        File.WriteAllText(tempFileLeft, contentLeft.NormalizeLineEndings());
+        File.WriteAllText(tempFileRight, contentRight.NormalizeLineEndings());
 
         try
         {
             // Copied from https://github.com/madskristensen/FileDiffer/blob/main/src/Commands/DiffFilesCommand.cs#L48-L56 (c) madskristensen
-            object args = $"\"{tmpFileLeft}\" \"{tmpFileRight}\"";
-            ((DTE)Package.GetGlobalService(typeof(SDTE))).Commands.Raise("5D4C0442-C0A2-4BE8-9B4D-AB1C28450942", 256, ref args, ref args);
+            object args = $"\"{tempFileLeft}\" \"{tempFileRight}\"";
+            ((DTE)Package.GetGlobalService(typeof(SDTE))).Commands.Raise("5D4C0442-C0A2-4BE8-9B4D-AB1C28450942", ID: 256, ref args, ref args);
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
         finally
         {
-            File.Delete(tmpFileLeft);
-            File.Delete(tmpFileRight);
+            File.Delete(tempFileLeft);
+            File.Delete(tempFileRight);
         }
     }
 
@@ -145,24 +145,24 @@ public static class IdeUtils
         return targetFramework is not null ? TfmVersion.Parse(targetFramework) : null;
     }
 
-    public static async Task<IProjectProperties> GetProjectProperties(UnconfiguredProject unconfiguredProject, ProjectConfiguration projectConfiguration)
+    public static async Task<IProjectProperties> GetProjectPropertiesAsync(UnconfiguredProject unconfiguredProject, ProjectConfiguration projectConfiguration)
     {
         try
         {
-            // it will throw "Release config was not found" to the Output if there is no such config in the project
+            // It will throw "Release config was not found" to the Output if there is no such config in the project
             projectConfiguration ??= await unconfiguredProject.Services.ProjectConfigurationsService.GetProjectConfigurationAsync("Release");
             var configuredProject = await unconfiguredProject.LoadConfiguredProjectAsync(projectConfiguration);
             return configuredProject.Services.ProjectPropertiesProvider.GetCommonProperties();
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
             // VS was not able to find the given config (but it still might exist)
             return null;
         }
     }
 
-    public static async Task<IEnumerable<ProjectConfiguration>> GetProjectConfigurations(UnconfiguredProject unconfiguredProject)
+    public static async Task<IEnumerable<ProjectConfiguration>> GetProjectConfigurationsAsync(UnconfiguredProject unconfiguredProject)
     {
         try
         {
@@ -170,15 +170,15 @@ public static class IdeUtils
                 .ProjectConfigurationsService
                 .GetKnownProjectConfigurationsAsync();
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
             // VS was not able to find the given config (but it still might exist)
             return [];
         }
     }
 
-    public static async void OpenInVSCode(string output)
+    public static void OpenInVSCode(string output)
     {
         if (string.IsNullOrWhiteSpace(output))
             return;
@@ -188,14 +188,14 @@ public static class IdeUtils
             var file = Path.GetTempFileName() + ".txt";
             File.WriteAllText(file, output.NormalizeLineEndings());
 
-            var psi = new ProcessStartInfo(file);
-            psi.Verb = "open";
-            psi.UseShellExecute = true;
-            Process.Start(psi);
+            var processStartInfo = new ProcessStartInfo(file);
+            processStartInfo.Verb = "open";
+            processStartInfo.UseShellExecute = true;
+            Process.Start(processStartInfo);
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -213,9 +213,9 @@ public static class IdeUtils
 
             DTE().ItemOperations.OpenFile(file);
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 }

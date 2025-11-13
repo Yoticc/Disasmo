@@ -147,12 +147,12 @@ namespace Disasmo.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool FgEnable {
+        public bool FlowgraphEnable {
             get {
-                return ((bool)(this["FgEnable"]));
+                return ((bool)(this["FlowgraphEnable"]));
             }
             set {
-                this["FgEnable"] = value;
+                this["FlowgraphEnable"] = value;
             }
         }
         
@@ -244,24 +244,24 @@ namespace Disasmo.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool DontGuessTFM {
+        public bool DontGuessTargetFramework {
             get {
-                return ((bool)(this["DontGuessTFM"]));
+                return ((bool)(this["DontGuessTargetFramework"]));
             }
             set {
-                this["DontGuessTFM"] = value;
+                this["DontGuessTargetFramework"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string OverridenTFM {
+        public string OverridenTargetFramework {
             get {
-                return ((string)(this["OverridenTFM"]));
+                return ((string)(this["OverridenTargetFramework"]));
             }
             set {
-                this["OverridenTFM"] = value;
+                this["OverridenTargetFramework"] = value;
             }
         }
         

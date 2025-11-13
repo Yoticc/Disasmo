@@ -19,13 +19,13 @@ public class TfmVersion : IComparable<TfmVersion>
         if (other is null)
             return 1;
 
-        var majorCmp = Nullable.Compare(Major, other.Major);
-        if (majorCmp != 0)
-            return majorCmp;
+        var majorCompare = Nullable.Compare(Major, other.Major);
+        if (majorCompare != 0)
+            return majorCompare;
 
-        var minorCmp = Nullable.Compare(Minor, other.Minor);
-        if (minorCmp != 0)
-            return minorCmp;
+        var minorCompare = Nullable.Compare(Minor, other.Minor);
+        if (minorCompare != 0)
+            return minorCompare;
 
         return Nullable.Compare(Patch, other.Patch);
     }

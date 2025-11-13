@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Windows.Data;
 using System.Windows.Forms;
 using System.Windows.Navigation;
 using System.Xml;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
-using Microsoft.Build.Utilities;
 
 namespace Disasmo;
 
@@ -22,16 +20,18 @@ public partial class DisasmWindowControl
     public DisasmWindowControl()
     {
         InitializeComponent();
+
         MainViewModel.PropertyChanged += (_, e) =>
         {
             // AvalonEdit is not bindable (lazy workaround)
             if (e.PropertyName == "Output") OutputEditor.Text = MainViewModel.Output;
             if (e.PropertyName == "PreviousOutput") OutputEditorPrev.Text = MainViewModel.PreviousOutput;
-            if (e.PropertyName == "Success") ApplySyntaxHighlighting(MainViewModel.Success && !MainViewModel.SettingsVm.JitDumpInsteadOfDisasm);
+            if (e.PropertyName == "Success") ApplySyntaxHighlighting(MainViewModel.Success && !MainViewModel.SettingsViewModel.JitDumpInsteadOfDisasm);
         };
+
         MainViewModel.MainPageRequested += () =>
         {
-            if (TabControl.SelectedIndex != 2) // ugly fix: don't leave "flowgraph" tab on reload
+            if (TabControl.SelectedIndex != 2) // Ugly fix: Don't leave "flowgraph" tab on reload
                 TabControl.SelectedIndex = 0;
         };
     }
@@ -40,19 +40,18 @@ public partial class DisasmWindowControl
     {
         if (asm)
         {
-            using (Stream stream = typeof(DisasmWindowControl).Assembly.GetManifestResourceStream("Disasmo.Resources.AsmSyntax.xshd"))
-            using (var reader = new XmlTextReader(stream))
-            {
-                var sh = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-                OutputEditor.SyntaxHighlighting = sh;
-                OutputEditorPrev.SyntaxHighlighting = sh;
-            }
+            using var stream = typeof(DisasmWindowControl).Assembly.GetManifestResourceStream("Disasmo.Resources.AsmSyntax.xshd");
+            using var reader = new XmlTextReader(stream);
+
+            var syntaxHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+            OutputEditor.SyntaxHighlighting = syntaxHighlighting;
+            OutputEditorPrev.SyntaxHighlighting = syntaxHighlighting;
         }
         else
         {
-            var sh = (IHighlightingDefinition)new HighlightingDefinitionTypeConverter().ConvertFrom("txt");
-            OutputEditor.SyntaxHighlighting = sh;
-            OutputEditorPrev.SyntaxHighlighting = sh;
+            var SyntaxHighlighting = (IHighlightingDefinition)new HighlightingDefinitionTypeConverter().ConvertFrom("txt");
+            OutputEditor.SyntaxHighlighting = SyntaxHighlighting;
+            OutputEditorPrev.SyntaxHighlighting = SyntaxHighlighting;
         }
     }
 
@@ -68,9 +67,9 @@ public partial class DisasmWindowControl
         {
             IdeUtils.DTE().ItemOperations.OpenFile(UserLogger.LogFile);
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -80,9 +79,9 @@ public partial class DisasmWindowControl
         {
             Process.Start(e.Uri.ToString());
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -92,9 +91,9 @@ public partial class DisasmWindowControl
         {
             File.WriteAllText(UserLogger.LogFile, "");
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 
@@ -108,27 +107,28 @@ public partial class DisasmWindowControl
             {
                 await ProcessUtils.RunProcess("explorer.exe", Path.GetDirectoryName(file));
             }
-            catch (Exception exc)
+            catch (Exception ex)
             {
-                Debug.WriteLine(exc);
+                Debug.WriteLine(ex);
             }
         }
     }
 
 	private void AvalonEdit_MouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
 	{
-        if ((Control.ModifierKeys & Keys.Control) == Keys.Control) {
-            double fontSize = this.MainViewModel.SettingsVm.FontSize;
-            fontSize += e.Delta * SystemInformation.MouseWheelScrollLines / 120;
+        if ((Control.ModifierKeys & Keys.Control) != Keys.Control)
+            return;
+         
+        var fontSize = MainViewModel.SettingsViewModel.FontSize;
+        fontSize += e.Delta * SystemInformation.MouseWheelScrollLines / 120;
 
-            if (fontSize < 8)
-                fontSize = 8;
-            else if (fontSize > 50)
-                fontSize = 50;
+        if (fontSize < 8)
+            fontSize = 8;
+        else if (fontSize > 50)
+            fontSize = 50;
             
-            this.MainViewModel.SettingsVm.FontSize = fontSize;
+        MainViewModel.SettingsViewModel.FontSize = fontSize;
 
-            e.Handled = true;
-        }
+        e.Handled = true;
     }
 }

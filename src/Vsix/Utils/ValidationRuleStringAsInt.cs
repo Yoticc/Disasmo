@@ -16,7 +16,10 @@ public class ValidationRuleStringAsInt : ValidationRule
 			return ValidationResult.ValidResult;
 
 		if (value is string valueAsString)
-			return int.TryParse(valueAsString, NumberStyles.Integer, cultureInfo, out parsedValue) ? ValidationResult.ValidResult : new ValidationResult(false, "Please enter a valid number!");
+		{
+			if (int.TryParse(valueAsString, NumberStyles.Integer, cultureInfo, out parsedValue))
+                return ValidationResult.ValidResult;
+        }
 
 		return new ValidationResult(false, "Please enter a valid number!");
 	}

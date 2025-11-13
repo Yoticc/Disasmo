@@ -1,5 +1,4 @@
-﻿using EnvDTE;
-using GalaSoft.MvvmLight;
+﻿using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using Microsoft.CodeAnalysis;
 using System;
@@ -16,6 +15,7 @@ using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Properties;
 using System.Collections.ObjectModel;
 using CAProject = Microsoft.CodeAnalysis.Project;
+using Microsoft.Build.Utilities;
 
 namespace Disasmo;
 
@@ -31,17 +31,17 @@ public class MainViewModel : ViewModelBase
     private CAProject _currentProject;
     private bool _success;
     private string _currentProjectPath;
-    private string _currentTf;
-    private string _fgPngPath;
-    private string DisasmoOutDir = "";
-    private ObservableCollection<FlowgraphItemViewModel> _fgPhases = new();
+    private string _currentTargetFramework;
+    private string _flowgraphPngPath;
+    private string DisasmoOutputDirectory = "";
+    private ObservableCollection<FlowgraphItemViewModel> _flowgraphPhases = new();
     private FlowgraphItemViewModel _selectedPhase;
 
-    // let's use new name for the temp folder each version to avoid possible issues (e.g. changes in the Disasmo.Loader)
+    // Let's use new name for the temp folder each version to avoid possible issues (e.g. changes in the Disasmo.Loader)
     private string DisasmoFolder => "Disasmo-v" + DisasmoPackage.Current?.GetCurrentVersion();
 
-    public SettingsViewModel SettingsVm { get; } = new();
-    public IntrinsicsViewModel IntrinsicsVm { get; } = new();
+    public SettingsViewModel SettingsViewModel { get; } = new();
+    public IntrinsicsViewModel IntrinsicsViewModel { get; } = new();
 
     public event Action MainPageRequested;
 
@@ -61,11 +61,19 @@ public class MainViewModel : ViewModelBase
             Set(ref _output, value);
 
             const string phasePrefix = "*************** Starting PHASE ";
-            JitDumpPhases = (Output ?? "")
+
+            if (_output is not null)
+            {
+                JitDumpPhases = Output
                     .Split('\n')
                     .Where(l => l.StartsWith(phasePrefix))
                     .Select(i => i.Replace(phasePrefix, ""))
                     .ToArray();
+            }
+            else
+            {
+                JitDumpPhases = [];
+            }
         }
     }
 
@@ -81,19 +89,19 @@ public class MainViewModel : ViewModelBase
         set => Set(ref _loadingStatus, value);
     }
 
-    public CancellationTokenSource UserCts { get; set; }
+    public CancellationTokenSource UserCancellationTokens { get; set; }
 
-    public CancellationToken UserCt => UserCts?.Token ?? default;
+    public CancellationToken UserCancellationToken => UserCancellationTokens?.Token ?? default;
 
     public void ThrowIfCanceled()
     {
-        if (UserCts?.IsCancellationRequested == true)
+        if (UserCancellationTokens?.IsCancellationRequested == true)
             throw new OperationCanceledException();
     }
 
     public ICommand CancelCommand => new RelayCommand(() =>
     {
-        try { UserCts?.Cancel(); } catch { }
+        try { UserCancellationTokens?.Cancel(); } catch { }
     });
 
     public string DefaultHotKey => DisasmoPackage.HotKey;
@@ -111,7 +119,7 @@ public class MainViewModel : ViewModelBase
         {
             if (!_isLoading && value)
             {
-                UserCts = new CancellationTokenSource();
+                UserCancellationTokens = new CancellationTokenSource();
             }
             Set(ref _isLoading, value);
         }
@@ -123,10 +131,10 @@ public class MainViewModel : ViewModelBase
         set => Set(ref _stopwatchStatus, value);
     }
 
-    public string FgPngPath
+    public string FlowgraphPngPath
     {
-        get => _fgPngPath;
-        set => Set(ref _fgPngPath, value);
+        get => _flowgraphPngPath;
+        set => Set(ref _flowgraphPngPath, value);
     }
 
     public ICommand RefreshCommand => new RelayCommand(() => RunOperationAsync(_currentSymbol, _currentProject));
@@ -137,10 +145,10 @@ public class MainViewModel : ViewModelBase
 
     public ICommand OpenInVS => new RelayCommand(() => IdeUtils.OpenInVS(Output));
 
-    public ObservableCollection<FlowgraphItemViewModel> FgPhases
+    public ObservableCollection<FlowgraphItemViewModel> FlowgraphPhases
     {
-        get => _fgPhases;
-        set => Set(ref _fgPhases, value);
+        get => _flowgraphPhases;
+        set => Set(ref _flowgraphPhases, value);
     }
 
     public FlowgraphItemViewModel SelectedPhase
@@ -149,11 +157,11 @@ public class MainViewModel : ViewModelBase
         set
         {
             Set(ref _selectedPhase, value);
-            _selectedPhase?.LoadImageAsync(UserCt);
+            _selectedPhase?.LoadImageAsync(UserCancellationToken);
         }
     }
 
-    public async Task RunFinalExe(DisasmoSymbolInfo symbolInfo, IProjectProperties projectProperties)
+    public async Task RunFinalExeAsync(DisasmoSymbolInfo symbolInfo, IProjectProperties projectProperties)
     {
         try
         {
@@ -164,14 +172,14 @@ public class MainViewModel : ViewModelBase
 
             Success = false;
             IsLoading = true;
-            FgPngPath = null;
+            FlowgraphPngPath = null;
             LoadingStatus = "Loading...";
 
-            var dstFolder = DisasmoOutDir;
-            if (!Path.IsPathRooted(dstFolder))
-                dstFolder = Path.Combine(Path.GetDirectoryName(_currentProjectPath), DisasmoOutDir);
+            var destinationFolder = DisasmoOutputDirectory;
+            if (!Path.IsPathRooted(destinationFolder))
+                destinationFolder = Path.Combine(Path.GetDirectoryName(_currentProjectPath), DisasmoOutputDirectory);
 
-            // TODO: respect AssemblyName property (if it doesn't match csproj name)
+            // TODO: Respect AssemblyName property (if it doesn't match csproj name)
             var fileName = Path.GetFileNameWithoutExtension(_currentProjectPath);
 
             try
@@ -189,17 +197,17 @@ public class MainViewModel : ViewModelBase
 
             var envVars = new Dictionary<string, string>();
 
-            if (!SettingsVm.RunAppMode && !SettingsVm.CrossgenIsSelected && !SettingsVm.NativeAotIsSelected)
+            if (!SettingsViewModel.RunAppMode && !SettingsViewModel.CrossgenIsSelected && !SettingsViewModel.NativeAotIsSelected)
             {
-                var addinVersion = DisasmoPackage.Current.GetCurrentVersion();
-                await LoaderAppManager.InitLoaderAndCopyTo(_currentTf, dstFolder, log => { /*TODO: update UI*/ }, addinVersion, UserCt);
+                var disasmoVersion = DisasmoPackage.Current.GetCurrentVersion();
+                await LoaderAppManager.InitLoaderAndCopyTo(_currentTargetFramework, destinationFolder, log => { /*TODO: Update UI*/ }, disasmoVersion, UserCancellationToken);
             }
 
-            if (SettingsVm.JitDumpInsteadOfDisasm)
+            if (SettingsViewModel.JitDumpInsteadOfDisasm)
             {
                 envVars["DOTNET_JitDump"] = symbolInfo.Target;
             }
-            else if (SettingsVm.PrintInlinees)
+            else if (SettingsViewModel.PrintInlinees)
             {
                 envVars["DOTNET_JitPrintInlinedMethods"] = symbolInfo.Target;
             }
@@ -208,34 +216,37 @@ public class MainViewModel : ViewModelBase
                 envVars["DOTNET_JitDisasm"] = symbolInfo.Target;
             }
 
-            if (!string.IsNullOrWhiteSpace(SettingsVm.SelectedCustomJit) && !SettingsVm.CrossgenIsSelected && !SettingsVm.NativeAotIsSelected &&
-                !SettingsVm.SelectedCustomJit.Equals(Constants.DefaultJit, StringComparison.InvariantCultureIgnoreCase) && SettingsVm.UseCustomRuntime)
+            if (!string.IsNullOrWhiteSpace(SettingsViewModel.SelectedCustomJit) &&
+                !SettingsViewModel.CrossgenIsSelected && 
+                !SettingsViewModel.NativeAotIsSelected &&
+                !SettingsViewModel.SelectedCustomJit.Equals(Constants.DefaultJit, StringComparison.InvariantCultureIgnoreCase) &&
+                SettingsViewModel.UseCustomRuntime)
             {
-                envVars["DOTNET_AltJitName"] = SettingsVm.SelectedCustomJit;
+                envVars["DOTNET_AltJitName"] = SettingsViewModel.SelectedCustomJit;
                 envVars["DOTNET_AltJit"] = symbolInfo.Target;
             }
 
-            envVars["DOTNET_TieredPGO"] = SettingsVm.UsePGO ? "1" : "0";
-            envVars["DOTNET_JitDisasmDiffable"] = SettingsVm.Diffable ? "1" : "0";
+            envVars["DOTNET_TieredPGO"] = SettingsViewModel.UsePGO ? "1" : "0";
+            envVars["DOTNET_JitDisasmDiffable"] = SettingsViewModel.Diffable ? "1" : "0";
 
-            if (!SettingsVm.UseDotnetPublishForReload && SettingsVm.UseCustomRuntime)
+            if (!SettingsViewModel.UseDotnetPublishForReload && SettingsViewModel.UseCustomRuntime)
             {
                 var (runtimePackPath, success) = GetPathToRuntimePack();
                 if (!success)
                     return;
 
-                // tell jit to look for BCL libs in the locally built runtime pack
+                // Tell jit to look for BCL libs in the locally built runtime pack
                 envVars["CORE_LIBRARIES"] = runtimePackPath;
             }
 
-            envVars["DOTNET_TieredCompilation"] = SettingsVm.UseTieredJit ? "1" : "0";
+            envVars["DOTNET_TieredCompilation"] = SettingsViewModel.UseTieredJit ? "1" : "0";
 
             // User is free to override any of those ^
-            SettingsVm.FillWithUserVars(envVars);
+            SettingsViewModel.FillWithUserVars(envVars);
 
 
-            string currentFgFile = null;
-            if (SettingsVm.FgEnable)
+            string currentFlowgraphFile = null;
+            if (SettingsViewModel.FlowgraphEnable)
             {
                 if (symbolInfo.MethodName == "*")
                 {
@@ -243,21 +254,21 @@ public class MainViewModel : ViewModelBase
                     return;
                 }
 
-                currentFgFile = Path.GetTempFileName();
+                currentFlowgraphFile = Path.GetTempFileName();
                 envVars["DOTNET_JitDumpFg"] = symbolInfo.Target;
                 envVars["DOTNET_JitDumpFgDot"] = "1";
                 envVars["DOTNET_JitDumpFgPhase"] = "*";
-                envVars["DOTNET_JitDumpFgFile"] = currentFgFile;
+                envVars["DOTNET_JitDumpFgFile"] = currentFlowgraphFile;
             }
 
-            var command = $"\"{LoaderAppManager.DisasmoLoaderName}.dll\" \"{fileName}.dll\" \"{symbolInfo.ClassName}\" \"{symbolInfo.MethodName}\" {SettingsVm.UseUnloadableContext}";
-            if (SettingsVm.RunAppMode)
+            var command = $"\"{LoaderAppManager.DisasmoLoaderName}.dll\" \"{fileName}.dll\" \"{symbolInfo.ClassName}\" \"{symbolInfo.MethodName}\" {SettingsViewModel.UseUnloadableContext}";
+            if (SettingsViewModel.RunAppMode)
             {
                 command = $"\"{fileName}.dll\"";
             }
 
             var executable = "dotnet";
-            if (SettingsVm.CrossgenIsSelected && SettingsVm.UseCustomRuntime)
+            if (SettingsViewModel.CrossgenIsSelected && SettingsViewModel.UseCustomRuntime)
             {
                 var (clrCheckedFilesDir, checkedFound) = GetPathToCoreClrChecked();
                 if (!checkedFound)
@@ -267,7 +278,7 @@ public class MainViewModel : ViewModelBase
                 if (!runtimePackFound)
                     return;
 
-                executable = Path.Combine(SettingsVm.PathToLocalCoreClr, "dotnet.cmd");
+                executable = Path.Combine(SettingsViewModel.PathToLocalCoreClr, "dotnet.cmd");
                 command = $"{Path.Combine(clrCheckedFilesDir, "crossgen2", "crossgen2.dll")} --out aot ";
 
                 foreach (var envVar in envVars)
@@ -294,24 +305,24 @@ public class MainViewModel : ViewModelBase
                 envVars["DOTNET_TC_QuickJitForLoops"] = "1";
                 envVars["DOTNET_TC_CallCountingDelayMs"] = "0";
                 envVars["DOTNET_TieredCompilation"] = "1";
-                command += SettingsVm.Crossgen2Args.Replace("\r\n", " ").Replace("\n", " ") + $" \"{fileName}.dll\" ";
+                command += SettingsViewModel.Crossgen2Args.Replace("\r\n", " ").Replace("\n", " ") + $" \"{fileName}.dll\" ";
 
-                if (SettingsVm.UseDotnetPublishForReload)
+                if (SettingsViewModel.UseDotnetPublishForReload)
                 {
                     // Reference everything in the publish dir
-                    command += $" -r: \"{dstFolder}\\*.dll\" ";
+                    command += $" -r: \"{destinationFolder}\\*.dll\" ";
                 }
                 else
                 {
-                    // the runtime pack we use doesn't contain corelib so let's use "checked" corelib
-                    // TODO: build proper core_root with release version of corelib
+                    // The runtime pack we use doesn't contain corelib so let's use "checked" corelib
+                    // TODO: Build proper core_root with release version of corelib
                     var corelib = Path.Combine(clrCheckedFilesDir, "System.Private.CoreLib.dll");
                     command += $" -r: \"{runtimePackPath}\\*.dll\" -r: \"{corelib}\" ";
                 }
 
                 LoadingStatus = $"Executing crossgen2...";
             }
-            else if (SettingsVm.NativeAotIsSelected && SettingsVm.UseCustomRuntime)
+            else if (SettingsViewModel.NativeAotIsSelected && SettingsViewModel.UseCustomRuntime)
             {
                 var (clrReleaseFolder, clrFound) = GetPathToCoreClrCheckedForNativeAot();
                 if (!clrFound)
@@ -339,29 +350,29 @@ public class MainViewModel : ViewModelBase
                     command += keyLower + "=\"" + envVar.Value + "\" ";
                 }
                 envVars.Clear();
-                command += SettingsVm.IlcArgs.Replace("%DOTNET_REPO%", SettingsVm.PathToLocalCoreClr.TrimEnd('\\', '/')).Replace("\r\n", " ").Replace("\n", " ");
+                command += SettingsViewModel.IlcArgs.Replace("%DOTNET_REPO%", SettingsViewModel.PathToLocalCoreClr.TrimEnd('\\', '/')).Replace("\r\n", " ").Replace("\n", " ");
 
-                if (SettingsVm.UseDotnetPublishForReload)
+                if (SettingsViewModel.UseDotnetPublishForReload)
                 {
                     // Reference everything in the publish dir
-                    command += $" -r: \"{dstFolder}\\*.dll\" ";
+                    command += $" -r: \"{destinationFolder}\\*.dll\" ";
                 }
                 else
                 {
-                    // the runtime pack we use doesn't contain corelib so let's use "checked" corelib
-                    // TODO: build proper core_root with release version of corelib
+                    // The runtime pack we use doesn't contain corelib so let's use "checked" corelib.
+                    // TODO: Build proper core_root with release version of corelib
                     //var corelib = Path.Combine(clrCheckedFilesDir, "System.Private.CoreLib.dll");
                     //command += $" -r: \"{runtimePackPath}\\*.dll\" -r: \"{corelib}\" ";
                 }
 
                 LoadingStatus = "Executing ILC... Make sure your method is not inlined and is reachable as NativeAOT runs IL Link. It might take some time...";
             }
-            else if (SettingsVm.IsNonCustomNativeAOTMode())
+            else if (SettingsViewModel.IsNonCustomNativeAOTMode())
             {
                 LoadingStatus = "Compiling for NativeAOT (.NET 8.0+ is required) ...";
 
-                // For non-custom NativeAOT we need to use dotnet publish + with custom IlcArgs
-                // namely, we need to re-direct jit's output to a file (JitStdOutFile).
+                // For non-custom NativeAOT we need to use dotnet publish + with custom IlcArgs.
+                // Namely, we need to re-direct jit's output to a file (JitStdOutFile)
 
                 var tmpJitStdout = Path.GetTempFileName() + ".asm";
 
@@ -397,15 +408,15 @@ public class MainViewModel : ViewModelBase
                                             </Project>
                                             """);
 
-                var tfmPart = SettingsVm.DontGuessTFM && string.IsNullOrWhiteSpace(SettingsVm.OverridenTFM) ? "" : $"-f {_currentTf}";
+                var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? "" : $"-f {_currentTargetFramework}";
 
                 // NOTE: CustomBeforeDirectoryBuildProps is probably not a good idea to overwrite, but we need to pass IlcArgs somehow
                 var dotnetPublishArgs =
-                    $"publish {tfmPart} -r win-{SettingsViewModel.Arch} -c Release" +
+                    $"publish {targetFrameworkPart} -r win-{SettingsViewModel.Arch} -c Release" +
                     $" /p:PublishAot=true /p:CustomBeforeDirectoryBuildProps=\"{tmpProps}\"" +
                     $" /p:WarningLevel=0 /p:TreatWarningsAsErrors=false -v:q";
 
-                var publishResult = await ProcessUtils.RunProcess("dotnet", dotnetPublishArgs, null, Path.GetDirectoryName(_currentProjectPath), cancellationToken: UserCt);
+                var publishResult = await ProcessUtils.RunProcess("dotnet", dotnetPublishArgs, null, Path.GetDirectoryName(_currentProjectPath), cancellationToken: UserCancellationToken);
 
                 ThrowIfCanceled();
 
@@ -428,7 +439,7 @@ public class MainViewModel : ViewModelBase
                         Output = File.ReadAllText(tmpJitStdout);
 
                         // Keep the temp files around for debugging if it failed.
-                        // and delete them if it succeeded.
+                        // And delete them if it succeeded.
                         File.Delete(tmpProps);
                         File.Delete(tmpJitStdout);
                     }
@@ -445,7 +456,10 @@ public class MainViewModel : ViewModelBase
                 LoadingStatus = $"Executing DisasmoLoader...";
             }
 
-            if (!SettingsVm.UseDotnetPublishForReload && !SettingsVm.CrossgenIsSelected && !SettingsVm.NativeAotIsSelected && SettingsVm.UseCustomRuntime)
+            if (!SettingsViewModel.UseDotnetPublishForReload &&
+                !SettingsViewModel.CrossgenIsSelected &&
+                !SettingsViewModel.NativeAotIsSelected &&
+                SettingsViewModel.UseCustomRuntime)
             {
                 var (clrCheckedFilesDir, success) = GetPathToCoreClrChecked();
                 if (!success)
@@ -454,13 +468,13 @@ public class MainViewModel : ViewModelBase
                 executable = Path.Combine(clrCheckedFilesDir, "CoreRun.exe");
             }
 
-            if (SettingsVm.RunAppMode && 
-                !string.IsNullOrWhiteSpace(SettingsVm.OverridenJitDisasm))
+            if (SettingsViewModel.RunAppMode && 
+                !string.IsNullOrWhiteSpace(SettingsViewModel.OverridenJitDisasm))
             {
-                envVars["DOTNET_JitDisasm"] = SettingsVm.OverridenJitDisasm;
+                envVars["DOTNET_JitDisasm"] = SettingsViewModel.OverridenJitDisasm;
             }
 
-            var result = await ProcessUtils.RunProcess(executable, command, envVars, dstFolder, cancellationToken: UserCt);
+            var result = await ProcessUtils.RunProcess(executable, command, envVars, destinationFolder, cancellationToken: UserCancellationToken);
             ThrowIfCanceled();
 
             if (string.IsNullOrEmpty(result.Error))
@@ -473,29 +487,29 @@ public class MainViewModel : ViewModelBase
                 Output = result.Output + "\nERROR:\n" + result.Error;
             }
 
-            if (SettingsVm.FgEnable && SettingsVm.JitDumpInsteadOfDisasm)
+            if (SettingsViewModel.FlowgraphEnable && SettingsViewModel.JitDumpInsteadOfDisasm)
             {
-                currentFgFile += ".dot";
-                if (!File.Exists(currentFgFile))
+                currentFlowgraphFile += ".dot";
+                if (!File.Exists(currentFlowgraphFile))
                 {
-                    Output = $"Oops, JitDumpFgFile ('{currentFgFile}') doesn't exist :(\nInvalid Phase name?";
+                    Output = $"Oops, JitDumpFgFile ('{currentFlowgraphFile}') doesn't exist :(\nInvalid Phase name?";
                     return;
                 }
 
-                if (new FileInfo(currentFgFile).Length == 0)
+                if (new FileInfo(currentFlowgraphFile).Length == 0)
                 {
-                    Output = $"Oops, JitDumpFgFile ('{currentFgFile}') file is empty :(\nInvalid Phase name?";
+                    Output = $"Oops, JitDumpFgFile ('{currentFlowgraphFile}') file is empty :(\nInvalid Phase name?";
                     return;
                 }
 
-                var fgLines = File.ReadAllText(currentFgFile);
+                var flowGraphLines = File.ReadAllText(currentFlowgraphFile);
 
-                FgPhases.Clear();
-                var graphs = fgLines.Split(new [] {"digraph FlowGraph {"}, StringSplitOptions.RemoveEmptyEntries);
+                FlowgraphPhases.Clear();
+                var graphs = flowGraphLines.Split(["digraph FlowGraph {"], StringSplitOptions.RemoveEmptyEntries);
                 var graphIndex = 0;
 
-                var fgBaseDir = Path.Combine(Path.GetTempPath(), "Disasmo", "Flowgraphs", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(fgBaseDir);
+                var flowgraphBaseDirectory = Path.Combine(Path.GetTempPath(), "Disasmo", "Flowgraphs", Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(flowgraphBaseDirectory);
                 foreach (var graph in graphs)
                 {
                     try
@@ -516,26 +530,26 @@ public class MainViewModel : ViewModelBase
                         // Ignore invalid path chars
                         name = Path.GetInvalidFileNameChars().Aggregate(name, (current, ic) => current.Replace(ic, '_'));
 
-                        var dotPath = Path.Combine(fgBaseDir, $"{name}.dot");
+                        var dotPath = Path.Combine(flowgraphBaseDirectory, $"{name}.dot");
                         File.WriteAllText(dotPath, "digraph FlowGraph {\n" + graph);
 
-                        FgPhases.Add(new FlowgraphItemViewModel(SettingsVm) { Name = name, DotFileUrl = dotPath, ImageUrl = "" });
+                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = "" });
                     }
-                    catch (Exception exc)
+                    catch (Exception ex)
                     {
-                        Debug.WriteLine(exc);
+                        Debug.WriteLine(ex);
                     }
                 }
             }
 
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException ex)
         {
-            Output = e.Message;
+            Output = ex.Message;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Output = e.ToString();
+            Output = ex.ToString();
         }
         finally
         {
@@ -545,15 +559,16 @@ public class MainViewModel : ViewModelBase
 
     private string PreprocessOutput(string output)
     {
-        if (SettingsVm.JitDumpInsteadOfDisasm || SettingsVm.PrintInlinees)
+        if (SettingsViewModel.JitDumpInsteadOfDisasm || SettingsViewModel.PrintInlinees)
             return output;
-        return DisassemblyPrettifier.Prettify(output, !SettingsVm.ShowAsmComments && !SettingsVm.RunAppMode);
+
+        return DisassemblyPrettifier.Prettify(output, !SettingsViewModel.ShowAsmComments && !SettingsViewModel.RunAppMode);
     }
 
     private UnconfiguredProject GetUnconfiguredProject(Project project)
     {
         var context = project as IVsBrowseObjectContext;
-        if (context is null && project is not null) 
+        if (context is null && project is not null)
             context = project.Object as IVsBrowseObjectContext;
 
         return context?.UnconfiguredProject;
@@ -566,7 +581,7 @@ public class MainViewModel : ViewModelBase
         if (!success)
             return (null, false);
 
-        var runtimePacksPath = Path.Combine(SettingsVm.PathToLocalCoreClr, @"artifacts\bin\runtime");
+        var runtimePacksPath = Path.Combine(SettingsViewModel.PathToLocalCoreClr, @"artifacts\bin\runtime");
         string runtimePackPath = null;
         if (Directory.Exists(runtimePacksPath))
         {
@@ -589,11 +604,11 @@ public class MainViewModel : ViewModelBase
     private (string, bool) GetPathToCoreClrChecked()
     {
         var arch = SettingsViewModel.Arch;
-        var clrCheckedFilesDir = FindJitDirectory(SettingsVm.PathToLocalCoreClr, arch);
-        if (string.IsNullOrWhiteSpace(clrCheckedFilesDir))
+        var clrCheckedFilesDirectory = FindJitDirectory(SettingsViewModel.PathToLocalCoreClr, arch);
+        if (string.IsNullOrWhiteSpace(clrCheckedFilesDirectory))
         {
             Output = $"Path to a local dotnet/runtime repository is either not set or it's not built for {arch} arch yet" +
-                     (SettingsVm.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : "") +
+                     (SettingsViewModel.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : "") +
                      "\nPlease clone it and build it in `Checked` mode, e.g.:\n\n" +
                      "git clone git@github.com:dotnet/runtime.git\n" +
                      "cd runtime\n" +
@@ -602,14 +617,14 @@ public class MainViewModel : ViewModelBase
             return (null, false);
         }
 
-        return (clrCheckedFilesDir, true);
+        return (clrCheckedFilesDirectory, true);
     }
 
 
     private (string, bool) GetPathToCoreClrCheckedForNativeAot()
     {
         var arch = SettingsViewModel.Arch;
-        var releaseFolder = Path.Combine(SettingsVm.PathToLocalCoreClr, "artifacts", "bin", "coreclr", $"windows.{arch}.Checked");
+        var releaseFolder = Path.Combine(SettingsViewModel.PathToLocalCoreClr, "artifacts", "bin", "coreclr", $"windows.{arch}.Checked");
         if (!Directory.Exists(releaseFolder) || !Directory.Exists(Path.Combine(releaseFolder, "aotsdk")) || !Directory.Exists(Path.Combine(releaseFolder, "ilc")))
         {
             Output = $"Path to a local dotnet/runtime repository is either not set or it's not correctly built for {arch} arch yet for NativeAOT" +
@@ -624,19 +639,19 @@ public class MainViewModel : ViewModelBase
         return (releaseFolder, true);
     }
 
-    public async void RunOperationAsync(ISymbol symbol, CAProject project)
+    public async Task RunOperationAsync(ISymbol symbol, CAProject project)
     {
         var stopwatch = Stopwatch.StartNew();
         var dte = IdeUtils.DTE();
 
         // It's possible that the last modified C# document is not active (e.g. Disasmo itself is in the focus)
-        // so we have no choice but to run Save() for all the opened documents
+        // So we have no choice but to run Save() for all the opened documents
         dte.SaveAllDocuments();
 
         try
         {
             IsLoading = true;
-            FgPngPath = null;
+            FlowgraphPngPath = null;
             MainPageRequested?.Invoke();
             Success = false;
             _currentSymbol = symbol;
@@ -649,19 +664,19 @@ public class MainViewModel : ViewModelBase
                 return;
             }    
             
-            string clrCheckedFilesDir = null;
-            if (SettingsVm.UseCustomRuntime)
+            string clrCheckedFilesDirectory = null;
+            if (SettingsViewModel.UseCustomRuntime)
             {
                 var (dir, success) = GetPathToCoreClrChecked();
                 if (!success)
                     return;
 
-                clrCheckedFilesDir = dir;
+                clrCheckedFilesDirectory = dir;
             }
 
-            if (symbol is IMethodSymbol { IsGenericMethod: true } && !SettingsVm.RunAppMode)
+            if (symbol is IMethodSymbol { IsGenericMethod: true } && !SettingsViewModel.RunAppMode)
             {
-                // TODO: ask user to specify type parameters
+                // TODO: Ask user to specify type parameters
                 Output = "Generic methods are only supported in 'Run' mode";
                 return;
             }
@@ -680,12 +695,12 @@ public class MainViewModel : ViewModelBase
             _currentProjectPath = currentProject.FileName;
 
             var unconfiguredProject = GetUnconfiguredProject(currentProject);
-            // find all configurations, ordered by version descending
-            var projectConfigurations = (await IdeUtils.GetProjectConfigurations(unconfiguredProject))
+            // Find all configurations, ordered by version descending
+            var projectConfigurations = (await IdeUtils.GetProjectConfigurationsAsync(unconfiguredProject))
                 .OrderByDescending(IdeUtils.GetTargetFrameworkVersionDimension)
                 .ToList();
 
-            // filter Release configurations
+            // Filter Release configurations
             var releaseConfigurations = projectConfigurations
                 .Where(cfg => string.Equals(IdeUtils.GetConfigurationDimension(cfg), "Release", StringComparison.OrdinalIgnoreCase))
                 .ToList();
@@ -697,40 +712,40 @@ public class MainViewModel : ViewModelBase
             }
 
             ProjectConfiguration projectConfiguration;
-            if (string.IsNullOrWhiteSpace(SettingsVm.OverridenTFM))
+            if (string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework))
             {
-                // choose first (highest)
+                // Choose first (highest)
                 projectConfiguration = projectConfigurations.FirstOrDefault();
-                // resolve later
-                _currentTf = null;
+                // Resolve later
+                _currentTargetFramework = null;
             }
             else
             {
                 // No validation in this case
-                _currentTf = SettingsVm.OverridenTFM.Trim();
-                var currentTfmVersion = TfmVersion.Parse(_currentTf);
-                // find the best suitable project configuration
+                _currentTargetFramework = SettingsViewModel.OverridenTargetFramework.Trim();
+                var currentTfmVersion = TfmVersion.Parse(_currentTargetFramework);
+                // Find the best suitable project configuration
                 projectConfiguration = projectConfigurations
                     .FirstOrDefault(cfg => currentTfmVersion is not null && currentTfmVersion.CompareTo(IdeUtils.GetTargetFrameworkVersionDimension(cfg)) >= 0)
                     ?? projectConfigurations.FirstOrDefault();
             }
 
-            var projectProperties = await IdeUtils.GetProjectProperties(unconfiguredProject, projectConfiguration);
+            var projectProperties = await IdeUtils.GetProjectPropertiesAsync(unconfiguredProject, projectConfiguration);
             ThrowIfCanceled();
 
-            // resolve target framework
-            if (_currentTf is null)
+            // Resolve target framework
+            if (_currentTargetFramework is null)
             {
                 int? major;
                 if (projectProperties is not null)
                 {
-                    _currentTf = await projectProperties.GetEvaluatedPropertyValueAsync("TargetFramework");
-                    major = TfmVersion.Parse(_currentTf)?.Major;
+                    _currentTargetFramework = await projectProperties.GetEvaluatedPropertyValueAsync("TargetFramework");
+                    major = TfmVersion.Parse(_currentTargetFramework)?.Major;
                 }
                 else
                 {
-                    // fallback to net 7.0
-                    _currentTf = "net7.0";
+                    // Fallback to net 7.0
+                    _currentTargetFramework = "net7.0";
                     major = 7;
                 }
 
@@ -738,7 +753,7 @@ public class MainViewModel : ViewModelBase
 
                 if (major >= 6)
                 {
-                    if (!SettingsVm.UseCustomRuntime && major < 7)
+                    if (!SettingsViewModel.UseCustomRuntime && major < 7)
                     {
                         Output = 
                             "Only net7.0 (and newer) apps are supported with non-locally built dotnet/runtime.\n" + 
@@ -759,18 +774,18 @@ public class MainViewModel : ViewModelBase
 
             ThrowIfCanceled();
 
-            if (SettingsVm.RunAppMode && SettingsVm.UseDotnetPublishForReload)
+            if (SettingsViewModel.RunAppMode && SettingsViewModel.UseDotnetPublishForReload)
             {
-                // TODO: fix this
+                // TODO: Fix this
                 Output = "\"Run current app\" mode only works with \"dotnet build\" reload strategy, see Options tab.";
                 return;
             }
 
             // Validation for Flowgraph tab
-            if (SettingsVm.FgEnable)
+            if (SettingsViewModel.FlowgraphEnable)
             {
-                if (string.IsNullOrWhiteSpace(SettingsVm.GraphvisDotPath) ||
-                    !File.Exists(SettingsVm.GraphvisDotPath))
+                if (string.IsNullOrWhiteSpace(SettingsViewModel.GraphvisDotPath) ||
+                    !File.Exists(SettingsViewModel.GraphvisDotPath))
                 {
                     Output = 
                         "Graphvis is not installed or path to dot.exe is incorrect, see 'Settings' tab.\n" + 
@@ -779,57 +794,57 @@ public class MainViewModel : ViewModelBase
                     return;
                 }
 
-                if (!SettingsVm.JitDumpInsteadOfDisasm)
+                if (!SettingsViewModel.JitDumpInsteadOfDisasm)
                 {
                     Output = "Either disable flowgraphs in the 'Flowgraph' tab or enable JitDump.";
                     return;
                 }
             }
 
-            if (SettingsVm.CrossgenIsSelected || SettingsVm.NativeAotIsSelected)
+            if (SettingsViewModel.CrossgenIsSelected || SettingsViewModel.NativeAotIsSelected)
             {
-                if (SettingsVm.UsePGO)
+                if (SettingsViewModel.UsePGO)
                 {
                     Output = "PGO has no effect on R2R'd/NativeAOT code.";
                     return;
                 }
 
-                if (SettingsVm.RunAppMode)
+                if (SettingsViewModel.RunAppMode)
                 {
                     Output = "Run mode is not supported for crossgen/NativeAOT";
                     return;
                 }
 
-                if (SettingsVm.UseTieredJit)
+                if (SettingsViewModel.UseTieredJit)
                 {
                     Output = "TieredJIT has no effect on R2R'd/NativeAOT code.";
                     return;
                 }
 
-                if (SettingsVm.FgEnable)
+                if (SettingsViewModel.FlowgraphEnable)
                 {
                     Output = "Flowgraphs are not tested with crossgen2/NativeAOT yet (in Disasmo)";
                     return;
                 }
             }
 
-            var outputDir = projectProperties is null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
-            DisasmoOutDir = Path.Combine(outputDir, DisasmoFolder + (SettingsVm.UseDotnetPublishForReload ? "_published" : ""));
+            var outputDirectory = projectProperties is null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
+            DisasmoOutputDirectory = Path.Combine(outputDirectory, DisasmoFolder + (SettingsViewModel.UseDotnetPublishForReload ? "_published" : ""));
             var currentProjectDirPath = Path.GetDirectoryName(_currentProjectPath);
 
-            if (SettingsVm.IsNonCustomDotnetAotMode())
+            if (SettingsViewModel.IsNonCustomDotnetAotMode())
             {
                 ThrowIfCanceled();
                 var symbolInfo = SymbolUtils.FromSymbol(_currentSymbol);
-                await RunFinalExe(symbolInfo, projectProperties);
+                await RunFinalExeAsync(symbolInfo, projectProperties);
                 return;
             }
 
-            var tfmPart = SettingsVm.DontGuessTFM && string.IsNullOrWhiteSpace(SettingsVm.OverridenTFM) ? "" : $"-f {_currentTf}";
+            var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? "" : $"-f {_currentTargetFramework}";
 
             // Some things can't be set in CLI e.g. appending to DefineConstants
-            var tmpProps = Path.GetTempFileName() + ".props";
-            File.WriteAllText(tmpProps, $"""
+            var tempProperties = Path.GetTempFileName() + ".props";
+            File.WriteAllText(tempProperties, $"""
                                          <?xml version="1.0" encoding="utf-8"?>
                                          <Project>
                                              <PropertyGroup>
@@ -839,17 +854,17 @@ public class MainViewModel : ViewModelBase
                                          """);
 
             ProcessResult publishResult;
-            if (SettingsVm.UseDotnetPublishForReload)
+            if (SettingsViewModel.UseDotnetPublishForReload)
             {
                 LoadingStatus = $"dotnet publish -r win-{SettingsViewModel.Arch} -c Release -o ...";
 
-                var dotnetPublishArgs = $"publish {tfmPart} -r win-{SettingsViewModel.Arch} -c Release -o {DisasmoOutDir} --self-contained true /p:PublishTrimmed=false /p:PublishSingleFile=false /p:CustomBeforeDirectoryBuildProps=\"{tmpProps}\" /p:WarningLevel=0 /p:TreatWarningsAsErrors=false -v:q";
+                var dotnetPublishArgs = $"publish {targetFrameworkPart} -r win-{SettingsViewModel.Arch} -c Release -o {DisasmoOutputDirectory} --self-contained true /p:PublishTrimmed=false /p:PublishSingleFile=false /p:CustomBeforeDirectoryBuildProps=\"{tempProperties}\" /p:WarningLevel=0 /p:TreatWarningsAsErrors=false -v:q";
 
-                publishResult = await ProcessUtils.RunProcess("dotnet", dotnetPublishArgs, null, currentProjectDirPath, cancellationToken: UserCt);
+                publishResult = await ProcessUtils.RunProcess("dotnet", dotnetPublishArgs, null, currentProjectDirPath, cancellationToken: UserCancellationToken);
             }
             else
             {
-                if (SettingsVm.UseCustomRuntime)
+                if (SettingsViewModel.UseCustomRuntime)
                 {
                     var (_, rpSuccess) = GetPathToRuntimePack();
                     if (!rpSuccess)
@@ -858,11 +873,11 @@ public class MainViewModel : ViewModelBase
 
                 LoadingStatus = "dotnet build -c Release -o ...";
 
-                var dotnetBuildArgs = $"build {tfmPart} -c Release -o {DisasmoOutDir} --no-self-contained " +
+                var dotnetBuildArgs = $"build {targetFrameworkPart} -c Release -o {DisasmoOutputDirectory} --no-self-contained " +
                                          "/p:RuntimeIdentifier=\"\" " +
                                          "/p:RuntimeIdentifiers=\"\" " +
                                          "/p:WarningLevel=0 " +
-                                         $"/p:CustomBeforeDirectoryBuildProps=\"{tmpProps}\" " +
+                                         $"/p:CustomBeforeDirectoryBuildProps=\"{tempProperties}\" " +
                                          $"/p:TreatWarningsAsErrors=false \"{_currentProjectPath}\"";
 
                 Dictionary<string, string> fasterBuildEnvVars = new Dictionary<string, string>
@@ -871,18 +886,21 @@ public class MainViewModel : ViewModelBase
                     ["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1"
                 };
 
-                if (SettingsVm.UseNoRestoreFlag)
+                if (SettingsViewModel.UseNoRestoreFlag)
                 {
                     dotnetBuildArgs += " --no-restore --no-dependencies --nologo";
                     fasterBuildEnvVars["DOTNET_MULTILEVEL_LOOKUP"] = "0";
                 }
 
-                publishResult = await ProcessUtils.RunProcess("dotnet", dotnetBuildArgs, fasterBuildEnvVars,
+                publishResult = await ProcessUtils.RunProcess(
+                    "dotnet", 
+                    dotnetBuildArgs, 
+                    fasterBuildEnvVars,
                     currentProjectDirPath,
-                    cancellationToken: UserCt);
+                    cancellationToken: UserCancellationToken);
             }
 
-            File.Delete(tmpProps);
+            File.Delete(tempProperties);
             ThrowIfCanceled();
 
             if (!string.IsNullOrEmpty(publishResult.Error))
@@ -891,30 +909,30 @@ public class MainViewModel : ViewModelBase
                 return;
             }
 
-            // in case if there are compilation errors:
+            // In case if there are compilation errors:
             if (publishResult.Output.Contains(": error"))
             {
                 Output = publishResult.Output;
                 return;
             }
 
-            if (SettingsVm.UseDotnetPublishForReload && SettingsVm.UseCustomRuntime)
+            if (SettingsViewModel.UseDotnetPublishForReload && SettingsViewModel.UseCustomRuntime)
             {
                 LoadingStatus = "Copying files from locally built CoreCLR";
 
-                var dstFolder = DisasmoOutDir;
-                if (!Path.IsPathRooted(dstFolder))
+                var destinationFolder = DisasmoOutputDirectory;
+                if (!Path.IsPathRooted(destinationFolder))
                 {
-                    dstFolder = Path.Combine(currentProjectDirPath, DisasmoOutDir);
+                    destinationFolder = Path.Combine(currentProjectDirPath, DisasmoOutputDirectory);
                 }
 
-                if (!Directory.Exists(dstFolder))
+                if (!Directory.Exists(destinationFolder))
                 {
-                    Output = $"Something went wrong, {dstFolder} doesn't exist after 'dotnet publish -r win-{SettingsViewModel.Arch} -c Release' step";
+                    Output = $"Something went wrong, {destinationFolder} doesn't exist after 'dotnet publish -r win-{SettingsViewModel.Arch} -c Release' step";
                     return;
                 }
 
-                var copyClrFilesResult = await ProcessUtils.RunProcess("robocopy", $"/e \"{clrCheckedFilesDir}\" \"{dstFolder}", null, cancellationToken: UserCt);
+                var copyClrFilesResult = await ProcessUtils.RunProcess("robocopy", $"/e \"{clrCheckedFilesDirectory}\" \"{destinationFolder}", null, cancellationToken: UserCancellationToken);
 
                 if (!string.IsNullOrEmpty(copyClrFilesResult.Error))
                 {
@@ -925,15 +943,15 @@ public class MainViewModel : ViewModelBase
 
             ThrowIfCanceled();
             var finalSymbolInfo = SymbolUtils.FromSymbol(_currentSymbol);
-            await RunFinalExe(finalSymbolInfo, projectProperties);
+            await RunFinalExeAsync(finalSymbolInfo, projectProperties);
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException ex)
         {
-            Output = e.Message;
+            Output = ex.Message;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Output = e.ToString();
+            Output = ex.ToString();
         }
         finally
         {
@@ -945,13 +963,13 @@ public class MainViewModel : ViewModelBase
 
     private static string FindJitDirectory(string basePath, string arch)
     {
-        var jitDir = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{arch}.Checked");
-        if (Directory.Exists(jitDir))
-            return jitDir;
+        var jitDirectory = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{arch}.Checked");
+        if (Directory.Exists(jitDirectory))
+            return jitDirectory;
 
-        jitDir = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{arch}.Debug");
-        if (Directory.Exists(jitDir))
-            return jitDir;
+        jitDirectory = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{arch}.Debug");
+        if (Directory.Exists(jitDirectory))
+            return jitDirectory;
 
         return null;
     }

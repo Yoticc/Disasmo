@@ -14,14 +14,14 @@ public static class TextUtils
         if (File.Exists(filePath))
             return;
 
-        using Stream stream = typeof(TextUtils).Assembly.GetManifestResourceStream("Disasmo.Resources."  + resource);
-        using StreamReader reader = new StreamReader(stream);
+        using var stream = typeof(TextUtils).Assembly.GetManifestResourceStream("Disasmo.Resources."  + resource);
+        using var reader = new StreamReader(stream);
         var content = reader.ReadToEnd();
         File.WriteAllText(filePath, contentProcessor != null ? contentProcessor(content) : content);
     }
 
     public static string NormalizeLineEndings(this string text) =>
-        // normalize endings (DiffTool constantly complains)
+        // Normalize endings (DiffTool constantly complains)
         text.Replace(Environment.NewLine, "\n")
             .Replace("\n", Environment.NewLine) + Environment.NewLine;
 }

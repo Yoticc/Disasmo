@@ -36,15 +36,15 @@ public sealed class DisasmoPackage : AsyncPackage
             Current = this;
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
-            var disasmoCmd = IdeUtils.DTE().Commands.Item("Tools.Disasmo", 0);
-            if (disasmoCmd is null)
+            var disasmoCommand = IdeUtils.DTE().Commands.Item("Tools.Disasmo", 0);
+            if (disasmoCommand is null)
                 return;
 
             var binding = "";
-            if (disasmoCmd.Bindings is object[] bindingArray)
+            if (disasmoCommand.Bindings is object[] bindingArray)
             {
                 var hotkeys = bindingArray.Select(b => b.ToString()).ToArray();
-                // prefer Text Editor over Global
+                // Prefer Text Editor over Global
                 var bindingPair = hotkeys.FirstOrDefault(h => h.StartsWith("Text Editor::")) ?? hotkeys.FirstOrDefault();
                 if (bindingPair is not null && bindingPair.Contains("::"))
                 {
@@ -53,9 +53,9 @@ public sealed class DisasmoPackage : AsyncPackage
             }
             else
             {
-                if (disasmoCmd.Bindings is string bindingStr && bindingStr.Contains("::"))
+                if (disasmoCommand.Bindings is string bindingString && bindingString.Contains("::"))
                 {
-                    binding = bindingStr.Substring(bindingStr.IndexOf("::", StringComparison.Ordinal) + 2);
+                    binding = bindingString.Substring(bindingString.IndexOf("::", StringComparison.Ordinal) + 2);
                 }
             }
             HotKey = binding;
@@ -69,25 +69,25 @@ public sealed class DisasmoPackage : AsyncPackage
 
     public static DisasmoPackage Current { get; set; }
 
-    public static async Task<Version> GetLatestVersionOnline()
+    public static async Task<Version> GetLatestVersionOnlineAsync()
     {
         try
         {
             await Task.Delay(3000);
 
-            // is there an API to do it?
-            var client = new HttpClient();
-            var str = await client.GetStringAsync("https://marketplace.visualstudio.com/items?itemName=EgorBogatov.Disasmo");
+            // Is there an API to do it?
+            using var client = new HttpClient();
+            var content = await client.GetStringAsync("https://marketplace.visualstudio.com/items?itemName=EgorBogatov.Disasmo");
             var marker = "extensions/egorbogatov/disasmo/";
-            var index = str.IndexOf(marker);
-            return Version.Parse(str.Substring(index + marker.Length, str.IndexOf('/', index + marker.Length) - index - marker.Length));
+            var index = content.IndexOf(marker);
+            return Version.Parse(content.Substring(index + marker.Length, content.IndexOf('/', index + marker.Length) - index - marker.Length));
         }
         catch { return new Version(0, 0); }
     }
 
     public Version GetCurrentVersion()
     {
-        //TODO: fix
+        //TODO: Fix
         return new Version(5, 9, 2);
 
         //try
@@ -149,40 +149,40 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
         IdeUtils.DTE().SaveActiveDocument();
 
         var document = args.TextView?.TextBuffer?.GetRelatedDocuments()?.FirstOrDefault();
-        if (document is not null)
-        {
-            var pos = GetCaretPosition(args.TextView);
-            if (pos != -1)
-            {
-                async void CallBack(object _)
-                {
-                    try
-                    {
-                        if (DisasmoPackage.Current is null)
-                        {
-                            MessageBox.Show("Disasmo is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
-                            return;
-                        }
+        if (document is null)
+            return true;
 
-                        await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var position = GetCaretPosition(args.TextView);
+        if (position == -1)
+            return true;
 
-                        var symbol = await DisasmMethodOrClassAction.GetSymbolStatic(document, pos, default, true);
-                        var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, default);
-                        if (window?.ViewModel is {} viewModel)
-                        {
-                            viewModel.RunOperationAsync(symbol, document.Project);
-                        }
-                    }
-                    catch (Exception exc)
-                    {
-                        Debug.WriteLine(exc);
-                    }
-                }
-
-                ThreadPool.QueueUserWorkItem(CallBack);
-            }
-        }
+        ThreadPool.QueueUserWorkItem(CallBack);
 
         return true;
+
+        async void CallBack(object _)
+        {
+            try
+            {
+                if (DisasmoPackage.Current is null)
+                {
+                    MessageBox.Show("Disasmo is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
+                    return;
+                }
+
+                await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                var symbol = await DisasmMethodOrClassAction.GetSymbolStaticAsync(document, position, default, true);
+                var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, default);
+                if (window?.ViewModel is { } viewModel)
+                {
+                    viewModel.RunOperationAsync(symbol, document.Project);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+        }
     }
 }

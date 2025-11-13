@@ -33,14 +33,14 @@ public class SettingsViewModel : ViewModelBase
     private bool _useUnloadableContext;
     private bool _usePGO;
     private bool _diffable;
-    private bool _dontGuessTFM;
+    private bool _dontGuessTargetFramework;
     private bool _useCustomRuntime;
     private ObservableCollection<string> _customJits;
     private string _selectedCustomJit;
     private string _graphvisDot;
     private string _overridenJitDisasm;
-    private bool _fgEnable;
-    private string _overridenTfm;
+    private bool _flowgraphEnable;
+    private string _overridenTargetFramework;
 
     public SettingsViewModel()
     {
@@ -58,34 +58,34 @@ public class SettingsViewModel : ViewModelBase
         UseTieredJit = Settings.Default.UseTieredJit_V4;
         UseCustomRuntime = Settings.Default.UseCustomRuntime_V4;
         GraphvisDotPath = Settings.Default.GraphvisDotPath;
-        FgEnable = Settings.Default.FgEnable;
+        FlowgraphEnable = Settings.Default.FlowgraphEnable;
         PrintInlinees = Settings.Default.PrintInlinees_V3;
         UsePGO = Settings.Default.UsePGO;
         Diffable = Settings.Default.Diffable;
         UseUnloadableContext = Settings.Default.UseUnloadableContext;
         DisableLightBulb = Settings.Default.DisableLightBulb;
-        DontGuessTFM = Settings.Default.DontGuessTFM;
-        OverridenTFM = Settings.Default.OverridenTFM;
+        DontGuessTargetFramework = Settings.Default.DontGuessTargetFramework;
+        OverridenTargetFramework = Settings.Default.OverridenTargetFramework;
         CheckUpdates();
     }
 
     private async void CheckUpdates()
     {
         CurrentVersion = DisasmoPackage.Current?.GetCurrentVersion();
-        AvailableVersion = await DisasmoPackage.GetLatestVersionOnline();
+        AvailableVersion = await DisasmoPackage.GetLatestVersionOnlineAsync();
         if (CurrentVersion != null && AvailableVersion > CurrentVersion)
             UpdateIsAvailable = true;
     }
 
     public static string Arch { get; set; } = "x64";
 
-    public bool FgEnable
+    public bool FlowgraphEnable
     {
-        get => _fgEnable;
+        get => _flowgraphEnable;
         set
         {
-            Set(ref _fgEnable, value);
-            Settings.Default.FgEnable = value;
+            Set(ref _flowgraphEnable, value);
+            Settings.Default.FlowgraphEnable = value;
             Settings.Default.Save();
             if (value)
             {
@@ -155,10 +155,10 @@ public class SettingsViewModel : ViewModelBase
 
         if (!string.IsNullOrWhiteSpace(_pathToLocalCoreClr))
         {
-            var jitDir = FindJitDirectory(_pathToLocalCoreClr);
-            if (jitDir is not null)
+            var jitDirectory = FindJitDirectory(_pathToLocalCoreClr);
+            if (jitDirectory is not null)
             {
-                string[] jits = Directory.GetFiles(jitDir, "clrjit*.dll");
+                string[] jits = Directory.GetFiles(jitDirectory, "clrjit*.dll");
                 CustomJits = new ObservableCollection<string>(jits.Select(Path.GetFileName));
                 SelectedCustomJit = CustomJits.FirstOrDefault(j => j == DefaultJit);
                 if (SelectedCustomJit is not null)
@@ -213,13 +213,13 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    public string OverridenTFM
+    public string OverridenTargetFramework
     {
-        get => _overridenTfm;
+        get => _overridenTargetFramework;
         set
         {
-            Set("OverridenTFM", ref _overridenTfm, value);
-            Settings.Default.OverridenTFM = value;
+            Set("OverridenTargetFramework", ref _overridenTargetFramework, value);
+            Settings.Default.OverridenTargetFramework = value;
             Settings.Default.Save();
         }
     }
@@ -358,7 +358,7 @@ public class SettingsViewModel : ViewModelBase
 
             if (!value)
             {
-                FgEnable = false;
+                FlowgraphEnable = false;
             }
             else
             {
@@ -378,13 +378,13 @@ public class SettingsViewModel : ViewModelBase
         }
     }
 
-    public bool DontGuessTFM
+    public bool DontGuessTargetFramework
     {
-        get => _dontGuessTFM;
+        get => _dontGuessTargetFramework;
         set
         {
-            Set(ref _dontGuessTFM, value);
-            Settings.Default.DontGuessTFM = value;
+            Set(ref _dontGuessTargetFramework, value);
+            Settings.Default.DontGuessTargetFramework = value;
             Settings.Default.Save();
         }
     }
@@ -491,13 +491,13 @@ public class SettingsViewModel : ViewModelBase
 
     private static string FindJitDirectory(string basePath)
     {
-        var jitDir = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{Arch}.Checked");
-        if (Directory.Exists(jitDir))
-            return jitDir;
+        var jitDirectory = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{Arch}.Checked");
+        if (Directory.Exists(jitDirectory))
+            return jitDirectory;
 
-        jitDir = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{Arch}.Debug");
-        if (Directory.Exists(jitDir))
-            return jitDir;
+        jitDirectory = Path.Combine(basePath, $@"artifacts\bin\coreclr\windows.{Arch}.Debug");
+        if (Directory.Exists(jitDirectory))
+            return jitDirectory;
 
         return null;
     }

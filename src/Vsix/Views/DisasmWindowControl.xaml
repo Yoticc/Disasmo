@@ -20,8 +20,8 @@
         <utils:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 
         <Style x:Key="AvalonEditStyle" TargetType="avalonedit:TextEditor">
-			<Setter Property="FontSize" Value="{Binding SettingsVm.FontSize}"/>
-			<Setter Property="WordWrap" Value="True" />
+            <Setter Property="FontSize" Value="{Binding SettingsViewModel.FontSize}"/>
+            <Setter Property="WordWrap" Value="True" />
             <Setter Property="BorderBrush" Value="LightGray" />
             <Setter Property="BorderThickness" Value="2" />
             <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
@@ -31,16 +31,16 @@
             <Setter Property="ShowLineNumbers" Value="True" />
             <Setter Property="LineNumbersForeground" Value="Silver" />
         </Style>
-		<Style x:Key="textBoxWithErrors" TargetType="TextBox">
-			<Style.Triggers>
-				<Trigger Property="Validation.HasError" Value="true">
-					<Setter Property="ToolTip"
+        <Style x:Key="TextBoxWithErrors" TargetType="TextBox">
+            <Style.Triggers>
+                <Trigger Property="Validation.HasError" Value="true">
+                    <Setter Property="ToolTip"
 							Value="{Binding RelativeSource={x:Static RelativeSource.Self},
 						Path=(Validation.Errors)[0].ErrorContent}"/>
-				</Trigger>
-			</Style.Triggers>
-		</Style>
-	</UserControl.Resources>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
     <Grid Background="#EEF5FD">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -50,7 +50,7 @@
         </Grid.RowDefinitions>
         <Grid Background="#EEF5FD">
             <StackPanel Height="30" Orientation="Horizontal">
-               <CheckBox Margin="8,8,6,0" IsChecked="{Binding SettingsVm.UseCustomRuntime, Mode=TwoWay}">
+                <CheckBox Margin="8,8,6,0" IsChecked="{Binding SettingsViewModel.UseCustomRuntime, Mode=TwoWay}">
                     <TextBlock Margin="0,0,5,0" VerticalAlignment="Center">
                         <Run Text="Local"/>
                         <Run Text="dotnet/runtime" FontWeight="SemiBold" />
@@ -58,15 +58,15 @@
                     </TextBlock>
                 </CheckBox>
                 <Grid>
-                    <TextBox Width="196" Height="22" Text="{Binding SettingsVm.PathToLocalCoreClr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                             IsEnabled="{Binding SettingsVm.UseCustomRuntime}"/>
-                    <Button Command="{Binding SettingsVm.BrowseCommand}"  Foreground="Black" Content=" ... " BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center" Height="18" Margin="2,0,2,0"/>
+                    <TextBox Width="196" Height="22" Text="{Binding SettingsViewModel.PathToLocalCoreClr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                             IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}"/>
+                    <Button Command="{Binding SettingsViewModel.BrowseCommand}"  Foreground="Black" Content=" ... " BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center" Height="18" Margin="2,0,2,0"/>
                 </Grid>
-                <Button VerticalAlignment="Center" Margin="5,0,0,0" Height="22" Width="60" BorderThickness="0" Command="{Binding RefreshCommand}" Content="Reload"/> 
+                <Button VerticalAlignment="Center" Margin="5,0,0,0" Height="22" Width="60" BorderThickness="0" Command="{Binding RefreshCommand}" Content="Reload"/>
                 <StackPanel Margin="10,0,2,0" Orientation="Horizontal">
                     <TextBlock Text="JIT kind:" VerticalAlignment="Center"/>
                     <ComboBox Margin="4,0,0,0" Height="22" VerticalAlignment="Center"
-                              ItemsSource="{Binding SettingsVm.CustomJits}" SelectedItem="{Binding SettingsVm.SelectedCustomJit, Mode=TwoWay}" Width="140" />
+                              ItemsSource="{Binding SettingsViewModel.CustomJits}" SelectedItem="{Binding SettingsViewModel.SelectedCustomJit, Mode=TwoWay}" Width="140" />
                 </StackPanel>
             </StackPanel>
         </Grid>
@@ -110,7 +110,7 @@
                             </ListBox.ItemContainerStyle>
                         </ListBox>
                     </Grid>
-					<avalonedit:TextEditor Grid.Column="1" x:Name="OutputEditor" Style="{StaticResource AvalonEditStyle}" 
+                    <avalonedit:TextEditor Grid.Column="1" x:Name="OutputEditor" Style="{StaticResource AvalonEditStyle}" 
 										   PreviewMouseWheel="AvalonEdit_MouseWheel"/>
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="1" Margin="0,6,26,0">
                         <TextBlock HorizontalAlignment="Left">
@@ -125,7 +125,7 @@
 
             <TabItem Header="Previous output" >
                 <Grid>
-					<avalonedit:TextEditor x:Name="OutputEditorPrev" Style="{StaticResource AvalonEditStyle}" 
+                    <avalonedit:TextEditor x:Name="OutputEditorPrev" Style="{StaticResource AvalonEditStyle}" 
 										   PreviewMouseWheel="AvalonEdit_MouseWheel"/>
                     <TextBlock HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,26,0">
                         <Hyperlink Command="{Binding RunDiffWithPrevious}">Show diff</Hyperlink>
@@ -144,7 +144,7 @@
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                        <CheckBox IsEnabled="{Binding SettingsVm.UseCustomRuntime}" Margin="8,8,0,0" Content="Enable flowgraphs (toggles JitDump)" IsChecked="{Binding SettingsVm.FgEnable, Mode=TwoWay}"/>
+                        <CheckBox IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}" Margin="8,8,0,0" Content="Enable flowgraphs (toggles JitDump)" IsChecked="{Binding SettingsViewModel.FlowgraphEnable, Mode=TwoWay}"/>
                         <TextBlock Foreground="Gray" Margin="8,2,0,6" Text="Hit 'Reload' button to build it. Also, check 'Output' tab for errors if any. NOTE: graphs aren't rendered for single-block functions."/>
                     </StackPanel>
 
@@ -167,7 +167,7 @@
                     </Grid>
 
                     <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                             Grid.Row="1" ItemsSource="{Binding FgPhases}" SelectedItem="{Binding SelectedPhase}">
+                             Grid.Row="1" ItemsSource="{Binding FlowgraphPhases}" SelectedItem="{Binding SelectedPhase}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
@@ -178,24 +178,24 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Settings" DataContext="{Binding SettingsVm}">
+            <TabItem Header="Settings" DataContext="{Binding SettingsViewModel}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0">
                         <TextBlock Margin="8,8,0,0" Foreground="Red" Text="Some features work only with locally built dotnet" Visibility="{Binding UseCustomRuntime, Converter={StaticResource InversedBooleanToVisibility}}"  />
 
-						<StackPanel Margin="12,16,0,0" Orientation="Horizontal">
-							<TextBlock Text="Font size:"/>
-							<TextBox Margin="6,0,0,0" Width="220" Style="{StaticResource textBoxWithErrors}">
-								<TextBox.Text>
-									<Binding Path="FontSize" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged">
-										<Binding.ValidationRules>
-											<utils:ValidationRuleMinMaxInt Min="8" Max="50"></utils:ValidationRuleMinMaxInt>
-										</Binding.ValidationRules>
-									</Binding>
-								</TextBox.Text>
-							</TextBox>
-							<TextBlock Margin="6,0,0,0" Text="(use CTRL+Mouse wheel inside Output to make larger / smaller)" Foreground="Gray"/>
-						</StackPanel>						
+                        <StackPanel Margin="12,16,0,0" Orientation="Horizontal">
+                            <TextBlock Text="Font size:"/>
+                            <TextBox Margin="6,0,0,0" Width="220" Style="{StaticResource TextBoxWithErrors}">
+                                <TextBox.Text>
+                                    <Binding Path="FontSize" Mode="TwoWay" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <utils:ValidationRuleMinMaxInt Min="8" Max="50"></utils:ValidationRuleMinMaxInt>
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <TextBlock Margin="6,0,0,0" Text="(use CTRL+Mouse wheel inside Output to make larger / smaller)" Foreground="Gray"/>
+                        </StackPanel>
                         <CheckBox Content="Show comments in asm" Margin="8,3" IsChecked="{Binding ShowAsmComments, Mode=TwoWay}"/>
                         <CheckBox Content="Use TieredCompilation" IsChecked="{Binding UseTieredJit, Mode=TwoWay}" Margin="8,3"/>
                         <CheckBox Content="Disable LightBulb integration" IsChecked="{Binding DisableLightBulb, Mode=TwoWay}" Margin="8,3"/>
@@ -240,9 +240,9 @@
                                 </TextBlock>
                             </CheckBox>
 
-                            <!--DontGuessTFM-->
+                            <!--DontGuessTargetFramework-->
                         </StackPanel>
-                        <CheckBox Content="Don't guess project's TargetFramework" IsChecked="{Binding DontGuessTFM, Mode=TwoWay}" Margin="8,6,0,3"/>
+                        <CheckBox Content="Don't guess project's TargetFramework" IsChecked="{Binding DontGuessTargetFramework, Mode=TwoWay}" Margin="8,6,0,3"/>
 
                         <StackPanel Margin="12,16,0,0" Orientation="Horizontal">
                             <TextBlock Text="Path to Graphviz's dot.exe:"/>
@@ -314,8 +314,8 @@
                     <TextBlock Grid.Row="1" Margin="8,0,0,0" Foreground="Gray" Text="E.g. '_mm_add_epi8'"/>
                     <TextBox Grid.Row="2" Margin="8,6,0,6"
                         Width="363" HorizontalAlignment="Left" VerticalAlignment="Top" 
-                        Text="{Binding IntrinsicsVm.Input, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
-                    <ListBox Grid.Row="3" HorizontalAlignment="Stretch" ItemsSource="{Binding IntrinsicsVm.Suggestions}" BorderThickness="0" Background="White">
+                        Text="{Binding IntrinsicsViewModel.Input, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
+                    <ListBox Grid.Row="3" HorizontalAlignment="Stretch" ItemsSource="{Binding IntrinsicsViewModel.Suggestions}" BorderThickness="0" Background="White">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,3">
@@ -326,10 +326,10 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Grid Grid.RowSpan="5" Visibility="{Binding IntrinsicsVm.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
+                    <Grid Grid.RowSpan="5" Visibility="{Binding IntrinsicsViewModel.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
                           Background="#A8FFFFFF">
                         <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
-                        <TextBlock  Foreground="Black" Text="{Binding IntrinsicsVm.LoadingStatus}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
+                        <TextBlock  Foreground="Black" Text="{Binding IntrinsicsViewModel.LoadingStatus}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
                     </Grid>
                 </Grid>
             </TabItem>
@@ -339,27 +339,27 @@
         <StatusBar Grid.Row="3">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" IsEnabled="{Binding SettingsVm.RunAppMode}">
+                    <TextBlock VerticalAlignment="Center" IsEnabled="{Binding SettingsViewModel.RunAppMode}">
                         <Run Text="Overridden JitDisasm:"/>
                     </TextBlock>
                     <TextBox Margin="6,2" Width="170" 
-                             Text="{Binding SettingsVm.OverridenJitDisasm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                             IsEnabled="{Binding SettingsVm.RunAppMode}"/>
+                             Text="{Binding SettingsViewModel.OverridenJitDisasm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             IsEnabled="{Binding SettingsViewModel.RunAppMode}"/>
 
-                    <TextBlock Margin="20,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding SettingsVm.RunAppMode}">
+                    <TextBlock Margin="20,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding SettingsViewModel.RunAppMode}">
                         <Run Text="TargetFramework:"/>
                     </TextBlock>
                     <TextBox Margin="6,2" Width="90" 
-                             Text="{Binding SettingsVm.OverridenTFM, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                             Text="{Binding SettingsViewModel.OverridenTargetFramework, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Disasmo v."/>
-                    <TextBlock Text="{Binding SettingsVm.CurrentVersion}"/>
+                    <TextBlock Text="{Binding SettingsViewModel.CurrentVersion}"/>
 
                     <StackPanel Orientation="Horizontal" >
                         <TextBlock Margin="20,0,0,0" Foreground="#871CAE" FontWeight="SemiBold"
-                                   Visibility="{Binding SettingsVm.UpdateIsAvailable, Converter={StaticResource BooleanToVisibility}}">
+                                   Visibility="{Binding SettingsViewModel.UpdateIsAvailable, Converter={StaticResource BooleanToVisibility}}">
                             <Hyperlink RequestNavigate="OnOpenReleaseNotes" 
                                        NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md" 
                                        Foreground="#871CAE">Update is available</Hyperlink>
@@ -383,19 +383,19 @@
         </StatusBar>
 
         <CheckBox Content="JitDump" Grid.Row="2" Margin="380,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                  IsEnabled="{Binding SettingsVm.UseCustomRuntime}" IsChecked="{Binding SettingsVm.JitDumpInsteadOfDisasm, Mode=TwoWay}"/>
+                  IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}" IsChecked="{Binding SettingsViewModel.JitDumpInsteadOfDisasm, Mode=TwoWay}"/>
 
         <CheckBox Content="TieredJIT" Grid.Row="2" Margin="452,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                  IsChecked="{Binding SettingsVm.UseTieredJit, Mode=TwoWay}"/>
+                  IsChecked="{Binding SettingsViewModel.UseTieredJit, Mode=TwoWay}"/>
 
         <CheckBox Content="PGO" Grid.Row="2" Margin="526,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                  IsChecked="{Binding SettingsVm.UsePGO, Mode=TwoWay}"/>
+                  IsChecked="{Binding SettingsViewModel.UsePGO, Mode=TwoWay}"/>
 
         <CheckBox Content="Run" Grid.Row="2" Margin="578,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                  IsChecked="{Binding SettingsVm.RunAppMode, Mode=TwoWay}"/>
+                  IsChecked="{Binding SettingsViewModel.RunAppMode, Mode=TwoWay}"/>
 
         <CheckBox Content="Diffable" Grid.Row="2" Margin="628,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
-                  IsChecked="{Binding SettingsVm.Diffable, Mode=TwoWay}"/>
+                  IsChecked="{Binding SettingsViewModel.Diffable, Mode=TwoWay}"/>
 
         <Grid Grid.RowSpan="3" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}" Background="#66FFFFFF" >
             <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
@@ -403,6 +403,6 @@
             <TextBlock Foreground="Black" MaxWidth="600" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Text="{Binding LoadingStatus}" HorizontalAlignment="Center" 
                        VerticalAlignment="Center" Margin="0,80,0,0" FontSize="14" />
         </Grid>
-        
+
     </Grid>
 </UserControl>

@@ -28,12 +28,12 @@ public abstract class BaseSuggestedAction : ISuggestedAction
         try
         {
             LastDocument = null;
-            LastTokenPos = 0;
+            LastTokenPosition = 0;
             var document = SnapshotSpan.Snapshot.TextBuffer.GetRelatedDocuments().FirstOrDefault();
-            if (document is not null && await IsValidSymbol(document, CaretPosition, cancellationToken))
+            if (document is not null && await IsValidSymbolAsync(document, CaretPosition, cancellationToken))
             {
                 LastDocument = document;
-                LastTokenPos = CaretPosition;
+                LastTokenPosition = CaretPosition;
                 return true;
             }
 
@@ -45,7 +45,7 @@ public abstract class BaseSuggestedAction : ISuggestedAction
         }
     }
 
-    public int LastTokenPos { get; set; }
+    public int LastTokenPosition { get; set; }
 
     public Document LastDocument { get; set; }
 
@@ -61,9 +61,10 @@ public abstract class BaseSuggestedAction : ISuggestedAction
 
     ImageMoniker ISuggestedAction.IconMoniker => KnownMonikers.CSLightswitch;
 
-    protected abstract Task<bool> IsValidSymbol(Document document, int tokenPosition, CancellationToken cancellationToken);
+    protected abstract Task<bool> IsValidSymbolAsync(Document document, int tokenPosition, CancellationToken cancellationToken);
 
-    public Task<IEnumerable<SuggestedActionSet>> GetActionSetsAsync(CancellationToken cancellationToken) => null;
+    public Task<IEnumerable<SuggestedActionSet>> GetActionSetsAsync(CancellationToken cancellationToken) => 
+        Task.FromResult((IEnumerable<SuggestedActionSet>)null);
 
     public Task<object> GetPreviewAsync(CancellationToken cancellationToken) => Task.FromResult<object>(null);
 

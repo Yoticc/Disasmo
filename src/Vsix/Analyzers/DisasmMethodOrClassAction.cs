@@ -23,16 +23,18 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
             var window = await IdeUtils.ShowWindowAsync<DisasmWindow>(true, cancellationToken);
             if (window?.ViewModel is {} viewModel)
             {
-                viewModel.RunOperationAsync(await GetSymbol(LastDocument, LastTokenPos, cancellationToken), LastDocument.Project);
+                var symbol = await GetSymbolAsync(LastDocument, LastTokenPosition, cancellationToken);
+                var project = LastDocument.Project;
+                viewModel.RunOperationAsync(symbol, project);
             }
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
     }
 
-    protected override async Task<bool> IsValidSymbol(Document document, int tokenPosition, CancellationToken cancellationToken)
+    protected override async Task<bool> IsValidSymbolAsync(Document document, int tokenPosition, CancellationToken cancellationToken)
     {
         try
         {
@@ -45,73 +47,64 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
 
             var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(cancellationToken);
             var token = syntaxTree.FindToken(tokenPosition);
-            if (token.Parent is MethodDeclarationSyntax)
-                return true;
-            if (token.Parent is ClassDeclarationSyntax)
-                return true;
-            if (token.Parent is StructDeclarationSyntax)
-                return true;
-            if (token.Parent is LocalFunctionStatementSyntax)
-                return true;
-            if (token.Parent is ConstructorDeclarationSyntax)
-                return true;
-            if (token.Parent is PropertyDeclarationSyntax)
-                return true;
-            if (token.Parent is OperatorDeclarationSyntax)
-                return true;
+            var isValidSymbol = token.Parent
+                is MethodDeclarationSyntax
+                or ClassDeclarationSyntax
+                or StructDeclarationSyntax
+                or LocalFunctionStatementSyntax
+                or ConstructorDeclarationSyntax
+                or PropertyDeclarationSyntax
+                or OperatorDeclarationSyntax;
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
         return false;
     }
 
 
-    static ISymbol FindRelatedSymbol(SemanticModel semanticModel, SyntaxNode node, bool allowClassesAndStructs, CancellationToken ct)
+    static ISymbol FindRelatedSymbol(
+        SemanticModel semanticModel, 
+        SyntaxNode node, 
+        bool allowClassesAndStructs, 
+        CancellationToken cancellationToken)
     {
-        if (node is LocalFunctionStatementSyntax lf)
-            return semanticModel.GetDeclaredSymbol(lf, ct);
-
-        if (node is MethodDeclarationSyntax m)
-            return semanticModel.GetDeclaredSymbol(m, ct);
-
-        if (node is PropertyDeclarationSyntax p)
-            return semanticModel.GetDeclaredSymbol(p, ct);
-
-        if (node is OperatorDeclarationSyntax o)
-            return semanticModel.GetDeclaredSymbol(o, ct);
-
-        if (node is ConstructorDeclarationSyntax ctor)
-            return semanticModel.GetDeclaredSymbol(ctor, ct);
-
-        if (!allowClassesAndStructs)
-            return null;
-
-        if (node is ClassDeclarationSyntax c)
-            return semanticModel.GetDeclaredSymbol(c, ct);
-
-        if (node is StructDeclarationSyntax s)
-            return semanticModel.GetDeclaredSymbol(s, ct);
+        if ((node 
+                is LocalFunctionStatementSyntax
+                or MethodDeclarationSyntax
+                or PropertyDeclarationSyntax
+                or OperatorDeclarationSyntax
+                or ConstructorDeclarationSyntax)
+            || (allowClassesAndStructs && node 
+                is ClassDeclarationSyntax 
+                or StructDeclarationSyntax))
+        {
+            return semanticModel.GetDeclaredSymbol(node, cancellationToken);
+        }
 
         return null;
     }
 
-    public static async Task<ISymbol> GetSymbolStatic(Document doc, int tok, CancellationToken ct, bool recursive = false)
+    public static async Task<ISymbol> GetSymbolStaticAsync(
+        Document document, 
+        int tokenPosition, 
+        CancellationToken cancellationToken, 
+        bool recursive = false)
     {
         try
         {
-            var semanticModel = await doc.GetSemanticModelAsync(ct);
+            var semanticModel = await document.GetSemanticModelAsync(cancellationToken);
             if (semanticModel is null)
                 return null;
 
-            var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(ct);
-            var token = syntaxTree.FindToken(tok);
+            var syntaxTree = await semanticModel.SyntaxTree.GetRootAsync(cancellationToken);
+            var token = syntaxTree.FindToken(tokenPosition);
             var parent = token.Parent;
             if (parent is null)
                 return null;
 
-            var symbol = FindRelatedSymbol(semanticModel, parent, true, ct);
+            var symbol = FindRelatedSymbol(semanticModel, parent, true, cancellationToken);
             if (symbol is null && recursive)
             {
                 while (true)
@@ -120,24 +113,23 @@ public class DisasmMethodOrClassAction : BaseSuggestedAction
                     if (parent is null)
                         return null;
 
-                    symbol = FindRelatedSymbol(semanticModel, parent, false, ct);
+                    symbol = FindRelatedSymbol(semanticModel, parent, false, cancellationToken);
                     if (symbol is not null)
-                    {
                         return symbol;
-                    }
                 }
             }
+
             return symbol;
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
             return null;
         }
     }
 
-    protected virtual Task<ISymbol> GetSymbol(Document doc, int pos, CancellationToken ct) => 
-        GetSymbolStatic(doc, pos, ct);
+    protected virtual Task<ISymbol> GetSymbolAsync(Document document, int tokenPosition, CancellationToken cancellationToken) => 
+        GetSymbolStaticAsync(document, tokenPosition, cancellationToken);
 
     public override string DisplayText
     {

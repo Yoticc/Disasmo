@@ -13,10 +13,11 @@ public static class IntrinsicsSourcesService
 {
     public static async Task<List<IntrinsicsInfo>> ParseIntrinsics(Action<string> progressReporter)
     {
-        var result = new List<IntrinsicsInfo>(600);
-        const string baseUrl =
-            "https://raw.githubusercontent.com/dotnet/runtime/main/src/libraries/System.Private.CoreLib/src/System/Runtime/Intrinsics/";
-        string[] files = {
+        const string RuntimeUrl = "https://raw.githubusercontent.com/dotnet/runtime/main/src";
+        const string IntrinsicsBaseUrl = RuntimeUrl + "/libraries/System.Private.CoreLib/src/System/Runtime/Intrinsics/";
+
+        string[] files = 
+        [
             "X86/Aes.cs",
             "X86/Avx.cs",
             "X86/Avx2.cs",
@@ -59,56 +60,55 @@ public static class IntrinsicsSourcesService
             "Vector256_1.cs",
             "Vector512.cs",
             "Vector512_1.cs",
-        };
+        ];
 
+        var result = new List<IntrinsicsInfo>(8192); 
         foreach (var file in files)
         {
             progressReporter(file);
-            result.AddRange(await ParseSourceFile(baseUrl + file));
+            var fullUrl = IntrinsicsBaseUrl + file;
+            await ParseSourceFile(fullUrl, result);
         }
 
         return result;
     }
 
-    public static async Task<IEnumerable<IntrinsicsInfo>> ParseSourceFile(string url)
+    public static async Task ParseSourceFile(string url, List<IntrinsicsInfo> outputIntrinsics)
     {
-        var client = new HttpClient();
+        using var client = new HttpClient();
         var content = await client.GetStringAsync(url);
-        var result = new List<IntrinsicsInfo>();
         using var workspace = new AdhocWorkspace();
 
-        var proj = 
+        var project = 
             workspace
             .AddProject("ParseIntrinsics", LanguageNames.CSharp)
-            .WithMetadataReferences(new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) });
-        var doc = proj.AddDocument("foo", SourceText.From(content));
-        var compilation = await doc.Project.GetCompilationAsync();
-        var root = await doc.GetSyntaxRootAsync();
+            .WithMetadataReferences([MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+        var document = project.AddDocument("foo", SourceText.From(content));
+        var compilation = await document.Project.GetCompilationAsync();
+        var root = await document.GetSyntaxRootAsync();
         var model = compilation.GetSemanticModel(root.SyntaxTree);
         var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
 
         foreach (var method in methods)
         {
             var tokens = method.ChildTokens().ToArray();
-            if (tokens.Length > 0)
-            {
-                var trivia = tokens.FirstOrDefault().LeadingTrivia;
-                var comments = string.Join("\n",
-                    trivia
-                        .ToString().Split('\n').Select(i => i.Trim(' ', '\r', '\t'))
-                        .Where(i => !string.IsNullOrWhiteSpace(i)));
-                var symbol = model.GetDeclaredSymbol(method);
-                var methodName = symbol.ToString()
-                    .Replace("System.Runtime.Intrinsics.X86.", "")
-                    .Replace("System.Runtime.Intrinsics.Arm.", "")
-                    .Replace("System.Runtime.Intrinsics.", "");
+            if (tokens.Length == 0)
+                continue;
 
-                var returnType = method.ReturnType.ToString();
-                result.Add(new IntrinsicsInfo { Method = returnType + " " + methodName, Comments = comments });
-            }
-        }
+            var trivia = tokens.FirstOrDefault().LeadingTrivia;
+            var comments = string.Join("\n",
+                trivia
+                    .ToString().Split('\n').Select(i => i.Trim(' ', '\r', '\t'))
+                    .Where(i => !string.IsNullOrWhiteSpace(i)));
+            var symbol = model.GetDeclaredSymbol(method);
+            var methodName = symbol.ToString()
+                .Replace("System.Runtime.Intrinsics.X86.", "")
+                .Replace("System.Runtime.Intrinsics.Arm.", "")
+                .Replace("System.Runtime.Intrinsics.", "");
 
-        return result;
+            var returnType = method.ReturnType.ToString();
+            outputIntrinsics.Add(new IntrinsicsInfo { Method = returnType + " " + methodName, Comments = comments });
+        };
     }
 }
 

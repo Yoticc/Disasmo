@@ -37,9 +37,9 @@ public class IntrinsicsViewModel : ViewModelBase
                 });
             
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            Debug.WriteLine(exc);
+            Debug.WriteLine(ex);
         }
             
         IsBusy = false;

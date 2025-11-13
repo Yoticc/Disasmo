@@ -9,15 +9,15 @@ namespace Disasmo;
 
 public class FlowgraphItemViewModel : ViewModelBase
 {
-    private readonly SettingsViewModel _settingsView;
+    private readonly SettingsViewModel _settingsViewModel;
     private string _imageUrl;
     private string _dotFileUrl;
     private string _name;
     private bool _isBusy;
 
-    public FlowgraphItemViewModel(SettingsViewModel settingsView)
+    public FlowgraphItemViewModel(SettingsViewModel settingsViewModel)
     {
-        _settingsView = settingsView;
+        _settingsViewModel = settingsViewModel;
     }
 
     public string Name
@@ -57,14 +57,14 @@ public class FlowgraphItemViewModel : ViewModelBase
             IsBusy = true;
             try
             {
-                var img = DotFileUrl + ".png";
-                var dotExeArgs = $"-Tpng -o\"{img}\" -Kdot \"{DotFileUrl}\"";
-                await ProcessUtils.RunProcess(_settingsView.GraphvisDotPath, dotExeArgs, cancellationToken: ct);
-                ImageUrl = img;
+                var image = DotFileUrl + ".png";
+                var dotExeArgs = $"-Tpng -o\"{image}\" -Kdot \"{DotFileUrl}\"";
+                await ProcessUtils.RunProcess(_settingsViewModel.GraphvisDotPath, dotExeArgs, cancellationToken: ct);
+                ImageUrl = image;
             }
-            catch (Exception exc)
+            catch (Exception ex)
             {
-                Debug.WriteLine(exc);
+                Debug.WriteLine(ex);
             }
             IsBusy = false;
         }

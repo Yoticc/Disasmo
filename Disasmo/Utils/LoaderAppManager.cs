@@ -12,9 +12,12 @@ public static class LoaderAppManager
 {
     public static readonly string DisasmoLoaderName = "DisasmoLoader4";
 
-    private static async Task<string> GetPathToLoader(string tf, Version addinVersion, CancellationToken ct)
+    private static async Task<string> GetPathToLoader(
+        string targetFramework, 
+        Version disasmoVersion, 
+        CancellationToken cancellationToken)
     {
-        var dotnetVersion = await ProcessUtils.RunProcess("dotnet", "--version", cancellationToken: ct);
+        var dotnetVersion = await ProcessUtils.RunProcess("dotnet", "--version", cancellationToken: cancellationToken);
         UserLogger.Log($"dotnet --version: {dotnetVersion.Output} ({dotnetVersion.Error})");
         var version = dotnetVersion.Output.Trim();
         if (!char.IsDigit(version[0]))
@@ -22,72 +25,77 @@ public static class LoaderAppManager
             // Something went wrong, use a random to proceed
             version = Guid.NewGuid().ToString("N");
         }
-        var folderName = $"{addinVersion}_{tf}_{version}";
+        var folderName = $"{disasmoVersion}_{targetFramework}_{version}";
         UserLogger.Log($"LoaderAppManager.GetPathToLoader: {folderName}");
         return Path.Combine(Path.GetTempPath(), DisasmoLoaderName, folderName);
     }
 
-    public static async Task InitLoaderAndCopyTo(string tf, string dest, Action<string> logger, Version addinVersion, CancellationToken ct)
+    public static async Task InitLoaderAndCopyTo(
+        string targetFramework, 
+        string destination, 
+        Action<string> logger, 
+        Version disasmoVersion, 
+        CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(dest))
-            throw new InvalidOperationException($"ERROR: dest dir was not found: {dest}");
+        if (!Directory.Exists(destination))
+            throw new InvalidOperationException($"ERROR: destination directory was not found: {destination}");
 
-        string dir;
+        string directory;
         try
         {
             logger("Getting SDK version...");
-            dir = await GetPathToLoader(tf, addinVersion, ct);
+            directory = await GetPathToLoader(targetFramework, disasmoVersion, cancellationToken);
         }
-        catch (Exception exc)
+        catch (Exception ex)
         {
-            throw new InvalidOperationException("ERROR in LoaderAppManager.GetPathToLoader: " + exc);
+            throw new InvalidOperationException("ERROR in LoaderAppManager.GetPathToLoader: " + ex);
         }
 
-        var csproj = Path.Combine(dir, $"{DisasmoLoaderName}.csproj");
-        var csfile = Path.Combine(dir, $"{DisasmoLoaderName}.cs");
-        var outDll = Path.Combine(dir, "out", $"{DisasmoLoaderName}.dll");
-        var outJson = Path.Combine(dir, "out", $"{DisasmoLoaderName}.runtimeconfig.json");
-        var outDllDest = Path.Combine(dest, DisasmoLoaderName + ".dll");
-        var outJsonDest = Path.Combine(dest, DisasmoLoaderName + ".runtimeconfig.json");
+        var csproj = Path.Combine(directory, $"{DisasmoLoaderName}.csproj");
+        var csfile = Path.Combine(directory, $"{DisasmoLoaderName}.cs");
+        var outDll = Path.Combine(directory, "out", $"{DisasmoLoaderName}.dll");
+        var outJson = Path.Combine(directory, "out", $"{DisasmoLoaderName}.runtimeconfig.json");
+        var outDllDestination = Path.Combine(destination, DisasmoLoaderName + ".dll");
+        var outJsonDestination = Path.Combine(destination, DisasmoLoaderName + ".runtimeconfig.json");
 
-        if (File.Exists(outDllDest) && File.Exists(outJsonDest))
+        if (File.Exists(outDllDestination) && File.Exists(outJsonDestination))
             return;
 
-        if (!Directory.Exists(dir))
+        if (!Directory.Exists(directory))
         {
-            Directory.CreateDirectory(dir);
+            Directory.CreateDirectory(directory);
         }
         else if (File.Exists(outDll) && File.Exists(outJson))
         {
-            File.Copy(outDll, outDllDest, true);
-            File.Copy(outJson, outJsonDest, true);
+            File.Copy(outDll, outDllDestination, overwrite: true);
+            File.Copy(outJson, outJsonDestination, overwrite: true);
             return;
         }
 
         logger($"Building '{DisasmoLoaderName}' project...");
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (!File.Exists(csfile))
-            TextUtils.SaveEmbeddedResourceTo($"{DisasmoLoaderName}.cs_template", dir);
+            TextUtils.SaveEmbeddedResourceTo($"{DisasmoLoaderName}.cs_template", directory);
 
         if (!File.Exists(csproj))
-            TextUtils.SaveEmbeddedResourceTo($"{DisasmoLoaderName}.csproj_template", dir, content => content.Replace("%tfm%", tf));
+            TextUtils.SaveEmbeddedResourceTo($"{DisasmoLoaderName}.csproj_template", directory, content => content.Replace("%tfm%", targetFramework));
 
         Debug.Assert(File.Exists(csfile));
         Debug.Assert(File.Exists(csproj));
 
-        ct.ThrowIfCancellationRequested();
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var msg = await ProcessUtils.RunProcess("dotnet", "build -c Release", workingDir: dir, cancellationToken: ct);
+        var message = await ProcessUtils.RunProcess("dotnet", "build -c Release", workingDirectory: directory, cancellationToken: cancellationToken);
 
         if (!File.Exists(outDll) || !File.Exists(outJson))
         {
-            throw new InvalidOperationException($"ERROR: 'dotnet build' did not produce expected binaries ('{outDll}'" +
-                                                $" and '{outJson}'):\n{msg.Output}\n\n{msg.Error}");
+            var errorMessage = $"ERROR: 'dotnet build' did not produce expected binaries ('{outDll}' and '{outJson}'):\n{message.Output}\n\n{message.Error}";
+            throw new InvalidOperationException(errorMessage);
         }            
 
-        ct.ThrowIfCancellationRequested();
-        File.Copy(outDll, outDllDest, true);
-        File.Copy(outJson, outJsonDest, true);
+        cancellationToken.ThrowIfCancellationRequested();
+        File.Copy(outDll, outDllDestination, overwrite: true);
+        File.Copy(outJson, outJsonDestination, overwrite: true);
     }
 }
