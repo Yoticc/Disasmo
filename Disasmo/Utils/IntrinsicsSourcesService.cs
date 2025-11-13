@@ -107,21 +107,30 @@ public static class IntrinsicsSourcesService
                 .Replace("System.Runtime.Intrinsics.", "");
 
             var returnType = method.ReturnType.ToString();
-            outputIntrinsics.Add(new IntrinsicsInfo { Method = returnType + " " + methodName, Comments = comments });
+            var intrinsicsInfo = new IntrinsicsInfo(method: returnType + " " + methodName, comments);
+            outputIntrinsics.Add(intrinsicsInfo);
         };
     }
 }
 
 public class IntrinsicsInfo
 {
-    public string Comments { get; set; }
-    public string Method { get; set; }
-
-    public bool Contains(string str)
+    public IntrinsicsInfo(string method, string comments)
     {
-        return Comments.ToLowerInvariant().Contains(str.ToLowerInvariant()) ||
-               Method.ToLowerInvariant().Contains(str.ToLowerInvariant());
+        _method = method; 
+        _comments = comments;
+
+        _cachedDataToCompare = method.ToLower() + '.' + comments.ToLower();
     }
+
+    readonly string _method;
+    readonly string _comments;
+    readonly string _cachedDataToCompare;
+
+    public string Method { get => _method; set => throw new NotImplementedException(); }
+    public string Comments { get => _comments; set => throw new NotImplementedException(); }
+
+    public bool Contains(string content) => _cachedDataToCompare.Contains(content.ToLowerInvariant());
 
     public override string ToString() => Method;
 }
