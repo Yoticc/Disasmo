@@ -61,7 +61,7 @@ public class IntrinsicsViewModel : ViewModelBase
         if (_intrinsics is null || _input.Length < 3)
         {
             Suggestions = null;
-            return;
+            return; 
         }
 
         Suggestions = _intrinsics.Where(i => i.Contains(_input)).Take(15).ToList();

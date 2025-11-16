@@ -6,8 +6,9 @@
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              xmlns:disasmo="clr-namespace:Disasmo"
              xmlns:utils="clr-namespace:Disasmo.Utils"
-             mc:Ignorable="d" TextElement.Foreground="Black"
-             d:DesignHeight="1000" d:DesignWidth="800">
+             mc:Ignorable="d"
+             d:DesignHeight="1000" d:DesignWidth="800"
+             Loaded="UserControl_Loaded">
     <UserControl.DataContext>
         <disasmo:MainViewModel x:Name="MainViewModel"/>
     </UserControl.DataContext>
@@ -19,19 +20,62 @@
         <utils:InversedBooleanToVisibilityConverter x:Key="InversedBooleanToVisibility" />
         <utils:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter" />
 
-        <Style x:Key="AvalonEditStyle" TargetType="avalonedit:TextEditor">
-            <Setter Property="FontSize" Value="{Binding SettingsViewModel.FontSize}"/>
-            <Setter Property="WordWrap" Value="True" />
-            <Setter Property="BorderBrush" Value="LightGray" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
-            <Setter Property="FontFamily" Value="Consolas" />
-            <Setter Property="IsReadOnly" Value="True" />
-            <Setter Property="ShowLineNumbers" Value="True" />
-            <Setter Property="LineNumbersForeground" Value="Silver" />
+        <SolidColorBrush x:Key="PlainText"/>
+        <SolidColorBrush x:Key="FileTabInactiveBorderBrush"/>
+        <SolidColorBrush x:Key="NumberLineBrush"/>
+        <SolidColorBrush x:Key="CheckBoxBorder"/>
+        <SolidColorBrush x:Key="CheckBoxBackground"/>
+        <SolidColorBrush x:Key="CheckBoxHoveredBackground"/>
+        <SolidColorBrush x:Key="KeywordColor"/>
+        <SolidColorBrush x:Key="CharColor"/>
+        <SolidColorBrush x:Key="CommentColor"/>
+
+        <SolidColorBrush x:Key="EnvironmentBackground" Color="{DynamicResource ResourceKey=VsColor.EnvironmentBackgroundTexture}"/>
+        <SolidColorBrush x:Key="ToolWindowBackground" Color="{DynamicResource ResourceKey=VsColor.ToolWindowBackground}"/>
+        <SolidColorBrush x:Key="ToolWindowBorder" Color="{DynamicResource ResourceKey=VsColor.ToolWindowBorder}"/>
+        <SolidColorBrush x:Key="HighlightText" Color="{DynamicResource ResourceKey=VsColor.Highlight}"/>
+        <SolidColorBrush x:Key="GrayText" Color="{DynamicResource ResourceKey=VsColor.GrayText}"/>
+        <SolidColorBrush x:Key="DarkGrayText" Color="{DynamicResource ResourceKey=VsColor.GrayText}" Opacity="0.6"/>
+        <SolidColorBrush x:Key="HyperlinkText" Color="{DynamicResource ResourceKey=VsColor.PanelHyperlink}"/>
+        <SolidColorBrush x:Key="HighlightHyperlinkText" Color="{DynamicResource ResourceKey=VsColor.Highlight}"/>
+        <SolidColorBrush x:Key="DarkHyperlinkText" Color="{DynamicResource ResourceKey=VsColor.PanelHyperlink}" Opacity="0.8"/>
+        <SolidColorBrush x:Key="LoadingBackground" Color="{DynamicResource ResourceKey=VsColor.HighlightText}" Opacity="0.125"/>
+
+        <Style TargetType="Button" BasedOn="{StaticResource ResourceKey=VsButtonStyleKey}"/>
+        <Style TargetType="CheckBox" BasedOn="{StaticResource ResourceKey=VsCheckBoxStyleKey}"/>
+        <Style TargetType="RadioButton">
+            <Setter Property="Background" Value="{DynamicResource CheckBoxBackground}"></Setter>
+            <Setter Property="BorderThickness" Value="1.5"></Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="RadioOuter" BorderBrush="{DynamicResource CheckBoxBorder}" BorderThickness="1" Width="16" Height="16" CornerRadius="8" 
+                                VerticalAlignment="Center" IsHitTestVisible="False">
+                                <Ellipse x:Name="RadioMark" Fill="Transparent" Width="8" Height="8" Margin="2" Visibility="Collapsed" IsHitTestVisible="False"/>
+                            </Border>
+                            <ContentPresenter Grid.Column="1" Margin="2,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="RadioMark" Property="Fill" Value="{DynamicResource GrayText}"/>
+                                <Setter TargetName="RadioMark" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="RadioOuter" Property="Background" Value="{DynamicResource CheckBoxHoveredBackground}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
-        <Style x:Key="TextBoxWithErrors" TargetType="TextBox">
+        <Style TargetType="ComboBox" BasedOn="{StaticResource ResourceKey=VsComboBoxStyleKey}"/>
+        <Style TargetType="TextBox" BasedOn="{StaticResource ResourceKey=VsTextBoxStyleKey}"/>
+        <Style x:Key="TextBoxWithErrors" TargetType="TextBox" BasedOn="{StaticResource ResourceKey=VsTextBoxStyleKey}">
             <Style.Triggers>
                 <Trigger Property="Validation.HasError" Value="true">
                     <Setter Property="ToolTip"
@@ -40,65 +84,119 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource PlainText}"/>
+        </Style>
+        <Style TargetType="Hyperlink">
+            <Setter Property="Foreground" Value="{DynamicResource HyperlinkText}"/>
+            <Setter Property="FontWeight" Value="Regular"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="TabItem" x:Key="CustomTabItemStyle">
+            <EventSetter Event="PreviewMouseLeftButtonDown" Handler="TabItem_PreviewMouseLeftButtonDown_FixDoubleTabIssue"/>
+            <Setter Property="Foreground" Value="{DynamicResource ResourceKey=VsBrush.FileTabText}"/>
+            <Setter Property="Focusable" Value="True"/>
+            <Setter Property="IsTabStop" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabBorder" Background="{DynamicResource ResourceKey=VsBrush.FileTabGradient}" BorderBrush="{DynamicResource ResourceKey=VsBrush.FileTabBorder}" 
+                                BorderThickness="0,0,1,0">
+                            <Border x:Name="TabBorderStatusPart" BorderThickness="0,2,0,0" BorderBrush="Transparent" Padding="4,1,4,1">
+                                <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource ResourceKey=VsBrush.FileTabSelectedText}"/>
+                                <Setter TargetName="TabBorder" Property="Background" Value="{DynamicResource ResourceKey=VsBrush.FileTabSelectedGradient}"/>
+                                <Setter TargetName="TabBorderStatusPart" Property="BorderBrush" Value="{DynamicResource ResourceKey=VsBrush.FileTabSelectedBorder}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="avalonedit:TextEditor">
+            <Setter Property="FontSize" Value="{Binding SettingsViewModel.FontSize}"/>
+            <Setter Property="Background" Value="{DynamicResource ToolWindowBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource PlainText}"/>
+            <Setter Property="FontWeight" Value="Regular"/>
+            <Setter Property="WordWrap" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="ShowLineNumbers" Value="True"/>
+            <Setter Property="LineNumbersForeground" Value="{DynamicResource NumberLineBrush}"/>
+        </Style>
     </UserControl.Resources>
-    <Grid Background="#EEF5FD">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid Background="#EEF5FD">
-            <StackPanel Height="30" Orientation="Horizontal">
-                <CheckBox Margin="8,8,6,0" IsChecked="{Binding SettingsViewModel.UseCustomRuntime, Mode=TwoWay}">
-                    <TextBlock Margin="0,0,5,0" VerticalAlignment="Center">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="323*"/>
+                <ColumnDefinition Width="478*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Height="30" Orientation="Horizontal" Grid.ColumnSpan="2" Background="{DynamicResource EnvironmentBackground}">
+                <CheckBox IsChecked="{Binding SettingsViewModel.UseCustomRuntime, Mode=TwoWay}"
+                          Margin="8,0,4,0">
+                    <TextBlock Margin="0,6,4,0" VerticalAlignment="Center">
                         <Run Text="Local"/>
                         <Run Text="dotnet/runtime" FontWeight="SemiBold" />
                         <Run Text="repo:"/>
                     </TextBlock>
                 </CheckBox>
                 <Grid>
-                    <TextBox Width="196" Height="22" Text="{Binding SettingsViewModel.PathToLocalCoreClr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
-                             IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}"/>
-                    <Button Command="{Binding SettingsViewModel.BrowseCommand}"  Foreground="Black" Content=" ... " BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center" Height="18" Margin="2,0,2,0"/>
+                    <TextBox Text="{Binding SettingsViewModel.PathToLocalCoreClr, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" 
+                             IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}" Width="196" Height="20" Padding="0,1,0,0"/>
+                    <Button Command="{Binding SettingsViewModel.BrowseCommand}" Content="..." 
+                            MinWidth="44" MinHeight="18" BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="1,0,1,0" Padding="0,-2,0,0"/>
                 </Grid>
-                <Button VerticalAlignment="Center" Margin="5,0,0,0" Height="22" Width="60" BorderThickness="0" Command="{Binding RefreshCommand}" Content="Reload"/>
-                <StackPanel Margin="10,0,2,0" Orientation="Horizontal">
-                    <TextBlock Text="JIT kind:" VerticalAlignment="Center"/>
-                    <ComboBox Margin="4,0,0,0" Height="22" VerticalAlignment="Center"
-                              ItemsSource="{Binding SettingsViewModel.CustomJits}" SelectedItem="{Binding SettingsViewModel.SelectedCustomJit, Mode=TwoWay}" Width="140" />
+                <Button Command="{Binding RefreshCommand}" Content="Reload"
+                        VerticalAlignment="Center" MinWidth="66" MinHeight="20" Margin="6,0,0,0" BorderThickness="0" Padding="0,-2,0,0"/>
+                <StackPanel Margin="10,-1,2,0" Orientation="Horizontal">
+                    <TextBlock Text="JIT kind:" VerticalAlignment="Center" Margin="0,-1,0,0"/>
+                    <ComboBox ItemsSource="{Binding SettingsViewModel.CustomJits}" SelectedItem="{Binding SettingsViewModel.SelectedCustomJit, Mode=TwoWay}"
+                              Margin="4,0,0,0" Width="140" Height="20" VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1" >
-            <TextBlock Margin="8,-2,0,4"  
-                       Foreground="Blue" FontSize="10" >
+        <StackPanel Grid.Row="1">
+            <TextBlock Foreground="{DynamicResource HighlightText}" Opacity="0.8" Margin="8,-2,0,4" FontSize="10">
                 <Run Text="Open 'Tools/Options/Keyboard' in VS, find 'Disasmo' command and assign a hot-key for faster iterations! Current one is"/>
                 <Run Text="{Binding DefaultHotKey, Mode=OneWay}"/>
             </TextBlock>
         </StackPanel>
 
-        <TabControl x:Name="TabControl" Grid.Row="2">
-            <TabItem Header="Output" Width="66">
+        <TabControl x:Name="TabControl" Grid.Row="2" Background="{DynamicResource ToolWindowBackground}" BorderBrush="{DynamicResource ToolWindowBorder}" BorderThickness="0,1,0,1">
+            <TabItem Style="{DynamicResource CustomTabItemStyle}" Header="Output" Width="66">
                 <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="3*"/>
+                        <RowDefinition Height="442*"/>
+                    </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <!--TODO: not finished yet (list of phases to jump)-->
-                    <Grid Width="200" HorizontalAlignment="Stretch" 
-                          Visibility="Collapsed">
+                    <Grid Width="200" 
+                          Visibility="Collapsed" Grid.ColumnSpan="2" Margin="0,0,594,0" Grid.RowSpan="2">
                         <TextBlock Text="JIT phases:" Margin="4" />
-                        <ListBox 
-                                 ItemsSource="{Binding JitDumpPhases}" 
-                                 Margin="0,0,1,0"
-                                 BorderThickness="0"
-                                 SelectionMode="Single"
-                                 HorizontalContentAlignment="Stretch"
-                                 ScrollViewer.CanContentScroll="True"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
-                                 ScrollViewer.VerticalScrollBarVisibility="Hidden">
+                        <ListBox ItemsSource="{Binding JitDumpPhases}" Margin="0,0,1,0" BorderThickness="0" SelectionMode="Single" HorizontalContentAlignment="Stretch"
+                                 ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Hidden">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding .}" Height="19" FontSize="11" Margin="-5,-1,-4,-1"  />
@@ -110,9 +208,9 @@
                             </ListBox.ItemContainerStyle>
                         </ListBox>
                     </Grid>
-                    <avalonedit:TextEditor Grid.Column="1" x:Name="OutputEditor" Style="{StaticResource AvalonEditStyle}" 
-										   PreviewMouseWheel="AvalonEdit_MouseWheel"/>
-                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="1" Margin="0,6,26,0">
+                    <avalonedit:TextEditor Grid.Column="1" x:Name="OutputEditor" 
+										   PreviewMouseWheel="AvalonEdit_MouseWheel" Grid.RowSpan="2"/>
+                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="1" Margin="0,0,26,0" Grid.Row="1">
                         <TextBlock HorizontalAlignment="Left">
                             <Hyperlink Command="{Binding OpenInVSCode}">Open in external editor</Hyperlink>
                         </TextBlock>
@@ -123,9 +221,9 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Previous output" >
+            <TabItem Style="{DynamicResource CustomTabItemStyle}" Header="Previous output">
                 <Grid>
-                    <avalonedit:TextEditor x:Name="OutputEditorPrev" Style="{StaticResource AvalonEditStyle}" 
+                    <avalonedit:TextEditor x:Name="OutputEditorPrev"
 										   PreviewMouseWheel="AvalonEdit_MouseWheel"/>
                     <TextBlock HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,26,0">
                         <Hyperlink Command="{Binding RunDiffWithPrevious}">Show diff</Hyperlink>
@@ -133,7 +231,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Flowgraph">
+            <TabItem Style="{DynamicResource CustomTabItemStyle}" Header="Flowgraph">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -143,12 +241,14 @@
                         <ColumnDefinition Width="200"/>
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
-                        <CheckBox IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}" Margin="8,8,0,0" Content="Enable flowgraphs (toggles JitDump)" IsChecked="{Binding SettingsViewModel.FlowgraphEnable, Mode=TwoWay}"/>
-                        <TextBlock Foreground="Gray" Margin="8,2,0,6" Text="Hit 'Reload' button to build it. Also, check 'Output' tab for errors if any. NOTE: graphs aren't rendered for single-block functions."/>
+                    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Background="{DynamicResource ToolWindowBackground}">
+                        <CheckBox IsEnabled="{Binding SettingsViewModel.UseCustomRuntime}" Margin="8,8,0,0" Content="Enable flowgraphs (toggles JitDump)" 
+                                  IsChecked="{Binding SettingsViewModel.FlowgraphEnable, Mode=TwoWay}"/>
+                        <TextBlock Foreground="{DynamicResource GrayText}" Margin="8,4,0,6" 
+                                   Text="Hit 'Reload' button to build it. Also, check 'Output' tab for errors if any. NOTE: graphs aren't rendered for single-block functions."/>
                     </StackPanel>
 
-                    <TextBlock Margin="0,2,8,0" HorizontalAlignment="Right" Grid.Column="1" VerticalAlignment="Top" >
+                    <TextBlock Margin="0,6,6,0" HorizontalAlignment="Right" Grid.Column="1" VerticalAlignment="Top" >
                         <Hyperlink RequestNavigate="OnOpenFolderWithFlowGraphs" 
                                    NavigateUri="{Binding SelectedPhase.DotFileUrl}">open folder with these graphs</Hyperlink>
                     </TextBlock>
@@ -161,16 +261,18 @@
 
                     <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
                           Visibility="{Binding SelectedPhase.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
-                          Background="#A8FFFFFF">
+                          Background="{DynamicResource LoadingBackground}">
                         <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
-                        <TextBlock  Foreground="Black" Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
+                        <TextBlock Foreground="Black" Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
                     </Grid>
 
-                    <ListBox ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                    <!-->What about the left side scrollbar? It requires a bunch of template code for its own list box implementation<-->
+                    <ListBox Background="{DynamicResource ToolWindowBackground}" BorderThickness="1" BorderBrush="{DynamicResource ToolWindowBorder}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                              Grid.Row="1" ItemsSource="{Binding FlowgraphPhases}" SelectedItem="{Binding SelectedPhase}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center"
+                                <TextBlock Foreground="{DynamicResource PlainText}" HorizontalAlignment="Left" VerticalAlignment="Center"
                                            Text="{Binding Name}" FontWeight="{Binding IsInitialPhase, Converter={StaticResource BoolToFontWeightConverter}}"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -178,11 +280,11 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Settings" DataContext="{Binding SettingsViewModel}">
+            <TabItem Style="{DynamicResource CustomTabItemStyle}" Header="Settings" DataContext="{Binding SettingsViewModel}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0">
-                        <TextBlock Margin="8,8,0,0" Foreground="Red" Text="Some features work only with locally built dotnet" Visibility="{Binding UseCustomRuntime, Converter={StaticResource InversedBooleanToVisibility}}"  />
-
+                        <TextBlock Margin="8,8,0,0" Text="Some features work only with locally built dotnet" 
+                                   Visibility="{Binding UseCustomRuntime, Converter={StaticResource InversedBooleanToVisibility}}"/>
                         <StackPanel Margin="12,16,0,0" Orientation="Horizontal">
                             <TextBlock Text="Font size:"/>
                             <TextBox Margin="6,0,0,0" Width="220" Style="{StaticResource TextBoxWithErrors}">
@@ -194,7 +296,7 @@
                                     </Binding>
                                 </TextBox.Text>
                             </TextBox>
-                            <TextBlock Margin="6,0,0,0" Text="(use CTRL+Mouse wheel inside Output to make larger / smaller)" Foreground="Gray"/>
+                            <TextBlock Margin="6,0,0,0" Text="(use CTRL+Mouse wheel inside Output to make larger / smaller)" Foreground="{DynamicResource DarkGrayText}"/>
                         </StackPanel>
                         <CheckBox Content="Show comments in asm" Margin="8,3" IsChecked="{Binding ShowAsmComments, Mode=TwoWay}"/>
                         <CheckBox Content="Use TieredCompilation" IsChecked="{Binding UseTieredJit, Mode=TwoWay}" Margin="8,3"/>
@@ -205,38 +307,39 @@
                             <CheckBox.Content>
                                 <TextBlock>
                                     <Run Text="Use Print-Inlinees instead of JitDisasm"/>
-                                    <Run Foreground="Gray" Text="- prints a tree of inlining decisions for a specific method" />
+                                    <Run Foreground="{DynamicResource DarkGrayText}" Text="- prints a tree of inlining decisions for a specific method" />
                                 </TextBlock>
                             </CheckBox.Content>
                         </CheckBox>
-                        <CheckBox IsChecked="{Binding RunAppMode, Mode=TwoWay}" Margin="8,3">
-                            <TextBlock TextWrapping="Wrap">
+                        <StackPanel Margin="8,0,0,0">
+                            <CheckBox IsChecked="{Binding RunAppMode, Mode=TwoWay}" Margin="0,3" VerticalAlignment="Bottom">
+                                <TextBlock TextWrapping="Wrap">
                                 <Run Text="Use 'Run current app' mode"/>
-                                <LineBreak/>
-                                <Run Foreground="Gray" Text="Normally, Disasmo creates an AssemblyLoadContext, finds the specified method and precompiles it. In this mode it will just execute the current app (must be a ConsoleApp) - make sure your method is invoked (and is not inlined). Useful for PGO-related experiments."/>
+                                </TextBlock>
+                            </CheckBox>
+                            <TextBlock TextWrapping="Wrap" Margin="22,0,0,0">
+                                <Run Foreground="{DynamicResource DarkGrayText}" 
+                                     Text="Normally, Disasmo creates an AssemblyLoadContext, finds the specified method and precompiles it. In this mode it will just execute the current app (must be a ConsoleApp) - make sure your method is invoked (and is not inlined). Useful for PGO-related experiments."/>
                             </TextBlock>
-                        </CheckBox>
+                        </StackPanel>
 
-                        <TextBlock Margin="8,12,8,4" Text="Reload strategy:"/>
-                        <StackPanel Margin="12,0,0,0">
-                            <RadioButton IsChecked="{Binding UseDotnetPublishForReload, Mode=TwoWay}" Margin="0,6,0,0">
+                        <TextBlock Margin="8,6,8,4" Text="Reload strategy:"/>
+                        <StackPanel Margin="26,0,0,0">
+                            <RadioButton IsChecked="{Binding UseDotnetPublishForReload, Mode=TwoWay}" Margin="0,4,0,0" >
                                 <TextBlock TextWrapping="Wrap">
                                     <Run Text="dotnet publish"/>
-                                    <Run Foreground="Gray" 
-                                         Text=" -- Slow, but works in complex scenarios."/>
+                                    <Run Foreground="{DynamicResource DarkGrayText}" Text=" -- Slow, but works in complex scenarios."/>
                                 </TextBlock>
                             </RadioButton>
                             <RadioButton IsChecked="{Binding UseDotnetBuildForReload, Mode=TwoWay}" Margin="0,6,0,0">
                                 <TextBlock TextWrapping="Wrap">
                                 <Run Text="dotnet build"/>
-                                <Run Foreground="Gray" 
-                                     Text=""/>
                                 </TextBlock>
                             </RadioButton>
                             <CheckBox Margin="18,4,0,2" IsChecked="{Binding UseNoRestoreFlag, Mode=TwoWay}">
                                 <TextBlock>
                                     <Run Text="Use --no-restore --no-dependencies flag" />
-                                    <Run Foreground="Gray" Text=" (makes it faster, but can lead to build issues)" />
+                                    <Run Foreground="{DynamicResource DarkGrayText}" Text=" (makes it faster, but can lead to build issues)" />
                                 </TextBlock>
                             </CheckBox>
 
@@ -247,7 +350,7 @@
                         <StackPanel Margin="12,16,0,0" Orientation="Horizontal">
                             <TextBlock Text="Path to Graphviz's dot.exe:"/>
                             <TextBox Margin="6,0,0,0" Width="220" Text="{Binding GraphvisDotPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBlock Margin="6,0,0,0" Text="(needed for flowgraphs)" Foreground="Gray"/>
+                            <TextBlock Margin="6,0,0,0" Text="(needed for flowgraphs)" Foreground="{DynamicResource DarkGrayText}"/>
                         </StackPanel>
 
                         <TextBlock Text="Custom Environment variables:" Margin="8,16,0,3"/>
@@ -261,16 +364,17 @@
                                  Text="{Binding CustomEnvVars, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                         <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,2,0,0">
-                            <Run Text="See" Foreground="Gray"/>
-                            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate" NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/jit/jitconfigvalues.h">jitconfigvalues.h</Hyperlink>
-                            <Run Text="and" Foreground="Gray"/>
-                            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate" NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/clrconfigvalues.h">clrconfigvalues.h</Hyperlink>
-                            <Run Text=" (all of them must be prefixed with 'DOTNET_')" Foreground="Gray"/>
+                            <Run Text="See" Foreground="{DynamicResource DarkGrayText}"/>
+                            <Hyperlink Foreground="{DynamicResource DarkHyperlinkText}" RequestNavigate="Hyperlink_OnRequestNavigate"
+                                       NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/jit/jitconfigvalues.h">jitconfigvalues.h</Hyperlink>
+                            <Run Text="and" Foreground="{DynamicResource DarkGrayText}"/>
+                            <Hyperlink Foreground="{DynamicResource DarkHyperlinkText}" RequestNavigate="Hyperlink_OnRequestNavigate"
+                                       NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/inc/clrconfigvalues.h">clrconfigvalues.h</Hyperlink>
+                            <Run Text=" (all of them must be prefixed with 'DOTNET_')" Foreground="{DynamicResource DarkGrayText}"/>
                             <!-- TODO: implement comments -->
                             <!--LineBreak/>
                             <Run Text="You can use '//' to add comments" Foreground="Gray" /-->
                         </TextBlock>
-
 
                         <TextBlock Text="crossgen2 arguments:" Margin="8,16,0,3"/>
                         <TextBox VerticalScrollBarVisibility="Visible" 
@@ -284,8 +388,10 @@
                                  Text="{Binding Crossgen2Args, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                         <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8,2,0,0">
-                            <Run Text="See" Foreground="Gray"/>
-                            <Hyperlink RequestNavigate="Hyperlink_OnRequestNavigate" NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/tools/aot/crossgen2/Crossgen2RootCommand.cs#L16">Crossgen2RootCommand.cs#L16</Hyperlink>
+                            <Run Text="See" Foreground="{DynamicResource DarkGrayText}"/>
+                            <Hyperlink Foreground="{DynamicResource DarkHyperlinkText}" 
+                                       NavigateUri="https://github.com/dotnet/runtime/blob/main/src/coreclr/tools/aot/crossgen2/Crossgen2RootCommand.cs#L16"
+                                       RequestNavigate="Hyperlink_OnRequestNavigate">Crossgen2RootCommand.cs#L16</Hyperlink>
                         </TextBlock>
 
                         <TextBlock Text="ILC (NativeAOT) arguments (experimental support in Disasmo):" Margin="8,16,0,3"/>
@@ -302,41 +408,48 @@
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
-            <TabItem Header="S.R.Intrinsics">
+            <TabItem Style="{DynamicResource CustomTabItemStyle}" Header="S.R.Intrinsics">
                 <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="217*"/>
+                        <ColumnDefinition Width="180*"/>
+                    </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Margin="8,0,0,0" Foreground="Gray" Text="Enter mnemonics to find corresponding System.Runtime.Intrinsics APIs"/>
-                    <TextBlock Grid.Row="1" Margin="8,0,0,0" Foreground="Gray" Text="E.g. '_mm_add_epi8'"/>
-                    <TextBox Grid.Row="2" Margin="8,6,0,6"
-                        Width="363" HorizontalAlignment="Left" VerticalAlignment="Top" 
+                    <TextBlock Grid.Row="0" Margin="8,0,0,0" Foreground="{DynamicResource DarkGrayText}" Text="Enter mnemonics to find corresponding System.Runtime.Intrinsics APIs" Grid.ColumnSpan="2"/>
+                    <TextBlock Margin="8,14,0,0" Foreground="{DynamicResource DarkGrayText}" Text="E.g. '_mm_add_epi8'" Grid.ColumnSpan="2" Grid.RowSpan="2"/>
+                    <TextBox Grid.Row="2" Margin="8,0,0,0"
+                        Width="363" HorizontalAlignment="Left" VerticalAlignment="Center" 
                         Text="{Binding IntrinsicsViewModel.Input, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" />
-                    <ListBox Grid.Row="3" HorizontalAlignment="Stretch" ItemsSource="{Binding IntrinsicsViewModel.Suggestions}" BorderThickness="0" Background="White">
+                    <ListBox Grid.Row="2" ItemsSource="{Binding IntrinsicsViewModel.Suggestions}" BorderThickness="0" Background="{DynamicResource ToolWindowBackground}" 
+                             Grid.ColumnSpan="2" Margin="0,28,0,0" Grid.RowSpan="2">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Margin="0,3">
-                                    <TextBox Text="{Binding Comments}" Background="Transparent" FontFamily="Consolas" Foreground="#5D9F5D" FontSize="14" BorderThickness="0" IsReadOnly="True"/>
-                                    <TextBox Text="{Binding Method}" Background="Transparent" FontFamily="Consolas" FontWeight="Medium" FontSize="14"  BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Text="{Binding Comments}" Background="Transparent" FontFamily="Consolas" Foreground="{DynamicResource CommentColor}" FontSize="14" 
+                                             BorderThickness="0" IsReadOnly="True"/>
+                                    <TextBox Text="{Binding Method}" Background="Transparent" FontFamily="Consolas" Foreground="{DynamicResource PlainText}" FontWeight="Medium" 
+                                             FontSize="14"  BorderThickness="0" IsReadOnly="True"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Grid Grid.RowSpan="5" Visibility="{Binding IntrinsicsViewModel.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
-                          Background="#A8FFFFFF">
+                    <Grid Grid.RowSpan="4" Visibility="{Binding IntrinsicsViewModel.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
+                          Background="{DynamicResource LoadingBackground}" Grid.ColumnSpan="2">
                         <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
-                        <TextBlock  Foreground="Black" Text="{Binding IntrinsicsViewModel.LoadingStatus}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
+                        <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding IntrinsicsViewModel.LoadingStatus}" HorizontalAlignment="Center" 
+                                   VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14" />
                     </Grid>
                 </Grid>
             </TabItem>
-
         </TabControl>
 
-        <StatusBar Grid.Row="3">
+        <StatusBar Grid.Row="3" Background="{DynamicResource EnvironmentBackground}">
             <StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock VerticalAlignment="Center" IsEnabled="{Binding SettingsViewModel.RunAppMode}">
@@ -345,7 +458,6 @@
                     <TextBox Margin="6,2" Width="170" 
                              Text="{Binding SettingsViewModel.OverridenJitDisasm, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                              IsEnabled="{Binding SettingsViewModel.RunAppMode}"/>
-
                     <TextBlock Margin="20,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding SettingsViewModel.RunAppMode}">
                         <Run Text="TargetFramework:"/>
                     </TextBlock>
@@ -357,23 +469,22 @@
                     <TextBlock Text="Disasmo v."/>
                     <TextBlock Text="{Binding SettingsViewModel.CurrentVersion}"/>
 
-                    <StackPanel Orientation="Horizontal" >
-                        <TextBlock Margin="20,0,0,0" Foreground="#871CAE" FontWeight="SemiBold"
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Margin="20,0,0,0"
                                    Visibility="{Binding SettingsViewModel.UpdateIsAvailable, Converter={StaticResource BooleanToVisibility}}">
-                            <Hyperlink RequestNavigate="OnOpenReleaseNotes" 
-                                       NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md" 
-                                       Foreground="#871CAE">Update is available</Hyperlink>
+                            <Hyperlink Foreground="{DynamicResource HighlightHyperlinkText}" RequestNavigate="OnOpenReleaseNotes" 
+                                       NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md">Update is available</Hyperlink>
                         </TextBlock>
-                        <TextBlock Margin="20,0,0,0" Foreground="#871CAE" FontWeight="SemiBold">
-                            <Hyperlink RequestNavigate="OnOpenReleaseNotes" 
-                                       NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md" 
-                                       Foreground="#871CAE">Disasmo release notes</Hyperlink>
+                        <TextBlock Margin="20,0,0,0">
+                            <Hyperlink Foreground="{DynamicResource HighlightHyperlinkText}" RequestNavigate="OnOpenReleaseNotes" 
+                                       NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md">Disasmo release notes</Hyperlink>
                         </TextBlock>
                     </StackPanel>
 
                     <TextBlock Margin="72,0,0,0">
                         <Hyperlink RequestNavigate="OnOpenLogs" NavigateUri="logs">open logs</Hyperlink>
                     </TextBlock>
+                    
                     <TextBlock Margin="12,0,0,0">
                         <Hyperlink RequestNavigate="OnClearLogs" NavigateUri="clear logs">clear logs</Hyperlink>
                     </TextBlock>
@@ -390,19 +501,18 @@
 
         <CheckBox Content="PGO" Grid.Row="2" Margin="526,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
                   IsChecked="{Binding SettingsViewModel.UsePGO, Mode=TwoWay}"/>
-
+        
         <CheckBox Content="Run" Grid.Row="2" Margin="578,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
                   IsChecked="{Binding SettingsViewModel.RunAppMode, Mode=TwoWay}"/>
-
+        
         <CheckBox Content="Diffable" Grid.Row="2" Margin="628,3,0,0" VerticalAlignment="Top" HorizontalAlignment="Left"
                   IsChecked="{Binding SettingsViewModel.Diffable, Mode=TwoWay}"/>
 
-        <Grid Grid.RowSpan="3" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}" Background="#66FFFFFF" >
+        <Grid Grid.RowSpan="3" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}" Background="{DynamicResource LoadingBackground}" >
             <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
             <Button Width="50" Height="20" Content="Cancel" Margin="260,0,0,0" Command="{Binding CancelCommand}"/>
-            <TextBlock Foreground="Black" MaxWidth="600" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Text="{Binding LoadingStatus}" HorizontalAlignment="Center" 
-                       VerticalAlignment="Center" Margin="0,80,0,0" FontSize="14" />
+            <TextBlock Foreground="{DynamicResource PlainText}" MaxWidth="600" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" 
+                       Text="{Binding LoadingStatus}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,80,0,0" FontSize="14"/>
         </Grid>
-
     </Grid>
 </UserControl>

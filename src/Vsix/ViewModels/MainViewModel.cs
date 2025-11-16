@@ -15,7 +15,6 @@ using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Properties;
 using System.Collections.ObjectModel;
 using CAProject = Microsoft.CodeAnalysis.Project;
-using Microsoft.Build.Utilities;
 
 namespace Disasmo;
 

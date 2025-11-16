@@ -134,9 +134,9 @@ public static class IntrinsicsSourcesService
         var compilation = await project.GetCompilationAsync();
         foreach (var document in project.Documents)
         {
-            var root = await document.GetSyntaxRootAsync();
-            var model = compilation.GetSemanticModel(root.SyntaxTree);
-            var methods = root.DescendantNodes().OfType<MethodDeclarationSyntax>();
+            var documentSyntaxRoot = await document.GetSyntaxRootAsync();
+            var model = compilation.GetSemanticModel(documentSyntaxRoot.SyntaxTree);
+            var methods = documentSyntaxRoot.DescendantNodes().OfType<MethodDeclarationSyntax>();
 
             foreach (var method in methods)
             {
@@ -144,9 +144,11 @@ public static class IntrinsicsSourcesService
                 if (!tokens.Any())
                     continue;
 
-                var trivia = tokens.FirstOrDefault().LeadingTrivia;
+                var rootToken = tokens.FirstOrDefault();
+
+                var triviaToken = rootToken.LeadingTrivia;
                 var commentsParts =
-                    trivia.ToString()
+                    triviaToken.ToString()
                     .Split('\n')
                     .Select(i => i.Trim(' ', '\r', '\t'))
                     .Where(i => !string.IsNullOrWhiteSpace(i));
