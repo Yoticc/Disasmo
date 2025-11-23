@@ -51,8 +51,6 @@
     <Compile Include="Analyzers\Base\CommonSuggestedActionsSourceProvider.cs" />
     <Compile Include="Analyzers\DisasmMethodOrClassAction.cs" />
     <Compile Include="Analyzers\Base\CommonSuggestedActionsSource.cs" />
-    <Compile Include="Utils\IdeAppearanceProvider.cs" />
-    <Compile Include="Utils\MefExtensions.cs" />
     <Compile Include="Utils\ValidationRuleMinMaxInt.cs" />
     <Compile Include="Utils\ValidationRuleStringAsInt.cs" />
     <Compile Include="Views\Converters\BoolToFontWeightConverter.cs" />

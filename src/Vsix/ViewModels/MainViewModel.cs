@@ -1,20 +1,20 @@
-﻿using GalaSoft.MvvmLight;
+﻿using Disasmo.ViewModels;
+using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using Microsoft.CodeAnalysis;
+using Microsoft.VisualStudio.ProjectSystem;
+using Microsoft.VisualStudio.ProjectSystem.Properties;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Input;
+using CAProject = Microsoft.CodeAnalysis.Project;
 using Project = EnvDTE.Project;
 using Task = System.Threading.Tasks.Task;
-using Disasmo.ViewModels;
-using Microsoft.VisualStudio.ProjectSystem;
-using Microsoft.VisualStudio.ProjectSystem.Properties;
-using System.Collections.ObjectModel;
-using CAProject = Microsoft.CodeAnalysis.Project;
 
 namespace Disasmo;
 
@@ -32,7 +32,7 @@ public class MainViewModel : ViewModelBase
     private string _currentProjectPath;
     private string _currentTargetFramework;
     private string _flowgraphPngPath;
-    private string DisasmoOutputDirectory = "";
+    private string DisasmoOutputDirectory = string.Empty;
     private ObservableCollection<FlowgraphItemViewModel> _flowgraphPhases = new();
     private FlowgraphItemViewModel _selectedPhase;
 
@@ -159,6 +159,8 @@ public class MainViewModel : ViewModelBase
             _selectedPhase?.LoadImageAsync(UserCancellationToken);
         }
     }
+
+    public bool IsAsmContextInEditor => Success && !SettingsViewModel.JitDumpInsteadOfDisasm;
 
     public async Task RunFinalExeAsync(DisasmoSymbolInfo symbolInfo, IProjectProperties projectProperties)
     {
@@ -407,7 +409,7 @@ public class MainViewModel : ViewModelBase
                                             </Project>
                                             """);
 
-                var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? "" : $"-f {_currentTargetFramework}";
+                var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? string.Empty : $"-f {_currentTargetFramework}";
 
                 // NOTE: CustomBeforeDirectoryBuildProps is probably not a good idea to overwrite, but we need to pass IlcArgs somehow
                 var dotnetPublishArgs =
@@ -532,7 +534,7 @@ public class MainViewModel : ViewModelBase
                         var dotPath = Path.Combine(flowgraphBaseDirectory, $"{name}.dot");
                         File.WriteAllText(dotPath, "digraph FlowGraph {\n" + graph);
 
-                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = "" });
+                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = string.Empty });
                     }
                     catch (Exception ex)
                     {
@@ -607,7 +609,7 @@ public class MainViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(clrCheckedFilesDirectory))
         {
             Output = $"Path to a local dotnet/runtime repository is either not set or it's not built for {arch} arch yet" +
-                     (SettingsViewModel.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : "") +
+                     (SettingsViewModel.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : string.Empty) +
                      "\nPlease clone it and build it in `Checked` mode, e.g.:\n\n" +
                      "git clone git@github.com:dotnet/runtime.git\n" +
                      "cd runtime\n" +
@@ -655,7 +657,7 @@ public class MainViewModel : ViewModelBase
             Success = false;
             _currentSymbol = symbol;
             _currentProject = project;
-            Output = "";
+            Output = string.Empty;
 
             if (symbol is null)
             {
@@ -697,12 +699,11 @@ public class MainViewModel : ViewModelBase
             // Find all configurations, ordered by version descending
             var projectConfigurations = (await IdeUtils.GetProjectConfigurationsAsync(unconfiguredProject))
                 .OrderByDescending(IdeUtils.GetTargetFrameworkVersionDimension)
-                .ToList();
+                .AsEnumerable();
 
             // Filter Release configurations
             var releaseConfigurations = projectConfigurations
-                .Where(cfg => string.Equals(IdeUtils.GetConfigurationDimension(cfg), "Release", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+                .Where(cfg => string.Equals(IdeUtils.GetConfigurationDimension(cfg), "Release", StringComparison.OrdinalIgnoreCase));
 
             // Use Release configurations only if we have any
             if (releaseConfigurations.Any())
@@ -723,6 +724,7 @@ public class MainViewModel : ViewModelBase
                 // No validation in this case
                 _currentTargetFramework = SettingsViewModel.OverridenTargetFramework.Trim();
                 var currentTfmVersion = TfmVersion.Parse(_currentTargetFramework);
+
                 // Find the best suitable project configuration
                 projectConfiguration = projectConfigurations
                     .FirstOrDefault(cfg => currentTfmVersion is not null && currentTfmVersion.CompareTo(IdeUtils.GetTargetFrameworkVersionDimension(cfg)) >= 0)
@@ -828,7 +830,7 @@ public class MainViewModel : ViewModelBase
             }
 
             var outputDirectory = projectProperties is null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
-            DisasmoOutputDirectory = Path.Combine(outputDirectory, DisasmoFolder + (SettingsViewModel.UseDotnetPublishForReload ? "_published" : ""));
+            DisasmoOutputDirectory = Path.Combine(outputDirectory, DisasmoFolder + (SettingsViewModel.UseDotnetPublishForReload ? "_published" : string.Empty));
             var currentProjectDirPath = Path.GetDirectoryName(_currentProjectPath);
 
             if (SettingsViewModel.IsNonCustomDotnetAotMode())
@@ -839,7 +841,9 @@ public class MainViewModel : ViewModelBase
                 return;
             }
 
-            var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? "" : $"-f {_currentTargetFramework}";
+            var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) 
+                ? string.Empty 
+                : $"-f {_currentTargetFramework}";
 
             // Some things can't be set in CLI e.g. appending to DefineConstants
             var tempProperties = Path.GetTempFileName() + ".props";
@@ -956,7 +960,7 @@ public class MainViewModel : ViewModelBase
         {
             IsLoading = false;
             stopwatch.Stop();
-            StopwatchStatus = $"Disasm took {stopwatch.Elapsed.TotalSeconds:F1} s.";
+            StopwatchStatus = $"Disasm took {stopwatch.Elapsed.TotalSeconds:F1}s";
         }
     }
 

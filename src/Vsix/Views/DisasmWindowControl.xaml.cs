@@ -1,7 +1,6 @@
-﻿using Disasmo.Utils;
-using ICSharpCode.AvalonEdit.Highlighting;
+﻿using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
-using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text.Classification;
@@ -29,7 +28,13 @@ public partial class DisasmWindowControl
     public DisasmWindowControl()
     {
         InitializeComponent();
-        MefExtensions.SatisfyImportsOnce(this);
+
+        // Taken from https://gist.github.com/madskristensen/4d205244dd92c37c82e7
+        // It is necessary because usual component system... does not work for some reason.
+        // If you have enough experience, you can try to find out why this happens and then remove this crutch.
+        var compositionService = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+        compositionService.DefaultCompositionService.SatisfyImportsOnce(this);
+
         LoadAsmSyntaxDefinition();
         VSColorTheme.ThemeChanged += e => OnThemeUpdated();
 
@@ -38,21 +43,21 @@ public partial class DisasmWindowControl
             // AvalonEdit is not bindable (lazy workaround)
             if (e.PropertyName == "Output") OutputEditor.Text = MainViewModel.Output;
             if (e.PropertyName == "PreviousOutput") OutputEditorPrev.Text = MainViewModel.PreviousOutput;
-            if (e.PropertyName == "Success") ApplySyntaxHighlighting(asm: isAsmEditor);
+            if (e.PropertyName == "Success") ApplySyntaxHighlighting(asm: MainViewModel.IsAsmContextInEditor);
         };
 
         MainViewModel.MainPageRequested += () =>
         {
-            if (TabControl.SelectedIndex != 2) // ugly fix: don't leave "flowgraph" tab on reload
+            if (TabControl.SelectedIndex != 2) // Ugly fix: Don't leave "flowgraph" tab on reload
                 TabControl.SelectedIndex = 0;
         };
     }
 
     [Import]
-    IClassificationFormatMapService classificationFormatMapService { get; set; }
+    private IClassificationFormatMapService classificationFormatMapService { get; set; }
 
     [Import]
-    IClassificationTypeRegistryService classificationTypeRegistryService { get; set; }
+    private IClassificationTypeRegistryService classificationTypeRegistryService { get; set; }
 
     private IHighlightingDefinition _asmSyntaxHighlighting;
     private IHighlightingDefinition _txtSyntaxHighlighting;
@@ -64,8 +69,6 @@ public partial class DisasmWindowControl
         => _txtSyntaxHighlighting ??= (IHighlightingDefinition)new HighlightingDefinitionTypeConverter().ConvertFrom("txt");
 
     private XshdSyntaxDefinition asmSyntaxDefinition;
-
-    private bool isAsmEditor => MainViewModel.Success && !MainViewModel.SettingsViewModel.JitDumpInsteadOfDisasm;
 
     private void LoadAsmSyntaxDefinition()
     {
@@ -126,7 +129,7 @@ public partial class DisasmWindowControl
     {
         _asmSyntaxHighlighting = GetAsmSyntaxHighlighting();
 
-        if (isAsmEditor)
+        if (MainViewModel.IsAsmContextInEditor)
             ApplySyntaxHighlighting(asm: true);
     }
 
@@ -134,7 +137,6 @@ public partial class DisasmWindowControl
     {
         Resources["PlainText"] = GetThemedBrush(TreeViewColors.HighlightedSpanTextBrushKey);
         Resources["FileTabInactiveBorderBrush"] = GetThemedBrush(EnvironmentColors.FileTabInactiveBorderBrushKey);
-        Resources["NumberLineBrush"] = GetEnvironmentBrush("Line Number");
         Resources["DarkGrayTextBrush"] = GetThemedBrush(CommonControlsColors.TextBoxTextDisabledBrushKey);
         Resources["CheckBoxBorder"] = GetThemedBrush(CommonControlsColors.CheckBoxBorderBrushKey);
         Resources["CheckBoxBackground"] = GetThemedBrush(CommonControlsColors.CheckBoxBackgroundBrushKey);
@@ -144,6 +146,7 @@ public partial class DisasmWindowControl
         Resources["KeywordColor"] = GetEditorBrushFromClassification(textFormatMap, "keyword");
         Resources["CommentColor"] = GetEditorBrushFromClassification(textFormatMap, "comment");
         Resources["CharColor"] = GetEditorBrushFromClassification(textFormatMap, "string");
+        Resources["NumberLineBrush"] = GetEditorBrushFromClassification(textFormatMap, "line number");
 
         UpdateAsmSyntaxHighlighting();
 
@@ -151,14 +154,6 @@ public partial class DisasmWindowControl
         {
             var properties = classificationMap.GetTextProperties(classificationTypeRegistryService.GetClassificationType(classificationName));
             return (SolidColorBrush)properties.ForegroundBrush;
-        }
-
-        static SolidColorBrush GetEnvironmentBrush(string colorKey)
-        {
-            System.Windows.Media.Color mediaColor = default;
-            IdeAppearanceProvider.GetColorItem(DefGuidList.guidTextEditorFontCategory, colorKey, foreground: true, ref mediaColor);
-            
-            return new SolidColorBrush(mediaColor);
         }
 
         static SolidColorBrush GetThemedBrush(ThemeResourceKey themeResourceKey)
@@ -186,10 +181,34 @@ public partial class DisasmWindowControl
         OnThemeUpdated();
     }
 
+    // Some custom style properties cannot be applied when the style is specified implicitly.
+    // Therefore, there are two ways: 
+    //  1. Specify the style for each element explicitly.
+    //  2. Use a loading event handler for each element and apply the overridden properties in it.
+    // The second option was chosen for convenience.
+    private void CheckBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        var checkBox = sender as System.Windows.Controls.CheckBox;
+        checkBox.Padding = new Thickness(3, 2, 3, 0);
+    }
+
+    private void TextBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        var checkBox = sender as System.Windows.Controls.TextBox;
+        checkBox.Padding = new Thickness(0, 2, 0, 0);
+    }
+
+    private void Button_Loaded(object sender, RoutedEventArgs e)
+    {
+        var checkBox = sender as System.Windows.Controls.Button;
+        checkBox.Padding = new Thickness(0, 0, 0, 0);
+    }
+
     // The issue is that the IsFocused property is only set after the tab item's trigger is called, so the trigger thinks the item is not selected.
     private void TabItem_PreviewMouseLeftButtonDown_FixDoubleTabIssue(object sender, MouseButtonEventArgs e)
     {
-        (sender as System.Windows.Controls.TabItem)?.Focus();
+        var tabItem = sender as System.Windows.Controls.TabItem;
+        tabItem.Focus();
     }
 
     private void Hyperlink_OnRequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -203,13 +222,6 @@ public partial class DisasmWindowControl
     {
         try
         {
-            //MefExtensions.SatisfyImportsOnce(this);
-            //var a = EditorFormatMapService;
-
-
-
-            _ = 3;
-
             IdeUtils.DTE().ItemOperations.OpenFile(UserLogger.LogFile);
         }
         catch (Exception ex)
@@ -234,7 +246,7 @@ public partial class DisasmWindowControl
     {
         try
         {
-            File.WriteAllText(UserLogger.LogFile, "");
+            File.WriteAllText(UserLogger.LogFile, string.Empty);
         }
         catch (Exception ex)
         {

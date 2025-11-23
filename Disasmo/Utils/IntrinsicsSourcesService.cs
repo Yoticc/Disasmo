@@ -63,7 +63,7 @@ public static class IntrinsicsSourcesService
 
         var contents = await DownloadContents(progressReporter, files);
 
-        var progressReport = $"Compiling source code...\nJust a little bit more to wait.";
+        var progressReport = $"Compiling source code...";
         progressReporter(progressReport);
 
         var result = await ParseSourceFile(contents);       
