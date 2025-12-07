@@ -40,7 +40,7 @@ public static class DisassemblyPrettifier
             var blocks = new List<Block>();
 
             var prevBlock = BlockType.Unknown;
-            var currentMethod = string.Empty;
+            var currentMethod = "";
 
             foreach (var line in lines)
             {
@@ -48,7 +48,7 @@ public static class DisassemblyPrettifier
                 {
                     currentMethod = line.Remove(0, MethodStartedMarker.Length);
                 }
-                else if (currentMethod == string.Empty) // In case disasm's output format has changed
+                else if (currentMethod == "") // In case disasm's output format has changed
                 {
                     Log($"Changed disasm's output format was detected.");
                     return rawAsm;

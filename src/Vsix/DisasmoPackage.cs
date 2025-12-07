@@ -40,7 +40,7 @@ public sealed class DisasmoPackage : AsyncPackage
             if (disasmoCommand is null)
                 return;
 
-            var binding = string.Empty;
+            var binding = "";
             if (disasmoCommand.Bindings is object[] bindingArray)
             {
                 var hotkeys = bindingArray.Select(b => b.ToString()).ToArray();
@@ -65,7 +65,7 @@ public sealed class DisasmoPackage : AsyncPackage
         }
     }
 
-    public static string HotKey = string.Empty;
+    public static string HotKey = "";
 
     public static DisasmoPackage Current { get; set; }
 

@@ -32,7 +32,7 @@ public class MainViewModel : ViewModelBase
     private string _currentProjectPath;
     private string _currentTargetFramework;
     private string _flowgraphPngPath;
-    private string DisasmoOutputDirectory = string.Empty;
+    private string DisasmoOutputDirectory = "";
     private ObservableCollection<FlowgraphItemViewModel> _flowgraphPhases = new();
     private FlowgraphItemViewModel _selectedPhase;
 
@@ -178,7 +178,7 @@ public class MainViewModel : ViewModelBase
 
             var destinationFolder = DisasmoOutputDirectory;
             if (!Path.IsPathRooted(destinationFolder))
-                destinationFolder = Path.Combine(Path.GetDirectoryName(_currentProjectPath), DisasmoOutputDirectory);
+                destinationFolder = Path.Combine(Path.GetDirectoryName(_currentProjectPath), destinationFolder);
 
             // TODO: Respect AssemblyName property (if it doesn't match csproj name)
             var fileName = Path.GetFileNameWithoutExtension(_currentProjectPath);
@@ -244,7 +244,6 @@ public class MainViewModel : ViewModelBase
 
             // User is free to override any of those ^
             SettingsViewModel.FillWithUserVars(envVars);
-
 
             string currentFlowgraphFile = null;
             if (SettingsViewModel.FlowgraphEnable)
@@ -409,7 +408,7 @@ public class MainViewModel : ViewModelBase
                                             </Project>
                                             """);
 
-                var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? string.Empty : $"-f {_currentTargetFramework}";
+                var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) ? "" : $"-f {_currentTargetFramework}";
 
                 // NOTE: CustomBeforeDirectoryBuildProps is probably not a good idea to overwrite, but we need to pass IlcArgs somehow
                 var dotnetPublishArgs =
@@ -534,7 +533,7 @@ public class MainViewModel : ViewModelBase
                         var dotPath = Path.Combine(flowgraphBaseDirectory, $"{name}.dot");
                         File.WriteAllText(dotPath, "digraph FlowGraph {\n" + graph);
 
-                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = string.Empty });
+                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = "" });
                     }
                     catch (Exception ex)
                     {
@@ -609,7 +608,7 @@ public class MainViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(clrCheckedFilesDirectory))
         {
             Output = $"Path to a local dotnet/runtime repository is either not set or it's not built for {arch} arch yet" +
-                     (SettingsViewModel.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : string.Empty) +
+                     (SettingsViewModel.CrossgenIsSelected ? "\n(When you use crossgen and target e.g. arm64 you need coreclr built for that arch)" : "") +
                      "\nPlease clone it and build it in `Checked` mode, e.g.:\n\n" +
                      "git clone git@github.com:dotnet/runtime.git\n" +
                      "cd runtime\n" +
@@ -657,7 +656,7 @@ public class MainViewModel : ViewModelBase
             Success = false;
             _currentSymbol = symbol;
             _currentProject = project;
-            Output = string.Empty;
+            Output = "";
 
             if (symbol is null)
             {
@@ -830,7 +829,7 @@ public class MainViewModel : ViewModelBase
             }
 
             var outputDirectory = projectProperties is null ? "bin" : await projectProperties.GetEvaluatedPropertyValueAsync("OutputPath");
-            DisasmoOutputDirectory = Path.Combine(outputDirectory, DisasmoFolder + (SettingsViewModel.UseDotnetPublishForReload ? "_published" : string.Empty));
+            DisasmoOutputDirectory = Path.Combine(outputDirectory, DisasmoFolder + (SettingsViewModel.UseDotnetPublishForReload ? "_published" : ""));
             var currentProjectDirPath = Path.GetDirectoryName(_currentProjectPath);
 
             if (SettingsViewModel.IsNonCustomDotnetAotMode())
@@ -842,7 +841,7 @@ public class MainViewModel : ViewModelBase
             }
 
             var targetFrameworkPart = SettingsViewModel.DontGuessTargetFramework && string.IsNullOrWhiteSpace(SettingsViewModel.OverridenTargetFramework) 
-                ? string.Empty 
+                ? "" 
                 : $"-f {_currentTargetFramework}";
 
             // Some things can't be set in CLI e.g. appending to DefineConstants
@@ -926,7 +925,7 @@ public class MainViewModel : ViewModelBase
                 var destinationFolder = DisasmoOutputDirectory;
                 if (!Path.IsPathRooted(destinationFolder))
                 {
-                    destinationFolder = Path.Combine(currentProjectDirPath, DisasmoOutputDirectory);
+                    destinationFolder = Path.Combine(currentProjectDirPath, destinationFolder);
                 }
 
                 if (!Directory.Exists(destinationFolder))

@@ -246,7 +246,7 @@ public partial class DisasmWindowControl
     {
         try
         {
-            File.WriteAllText(UserLogger.LogFile, string.Empty);
+            File.WriteAllText(UserLogger.LogFile, "");
         }
         catch (Exception ex)
         {

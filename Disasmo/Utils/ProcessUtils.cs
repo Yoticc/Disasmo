@@ -117,7 +117,7 @@ public static class ProcessUtils
     private static string DumpEnvVars(Dictionary<string, string> envVars)
     {
         if (envVars is null)
-            return string.Empty;
+            return "";
 
         var envVar = "";
         foreach (var ev in envVars)
