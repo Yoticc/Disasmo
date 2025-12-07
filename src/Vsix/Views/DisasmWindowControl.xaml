@@ -485,7 +485,7 @@
         <Grid Grid.RowSpan="99" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibility}}" Background="{DynamicResource LoadingBackground}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
-                    <ProgressBar IsIndeterminate="True" Width="210" Height="22"/>
+                    <ProgressBar IsIndeterminate="True" Width="240" Height="22"/>
                     <TextBlock MaxWidth="600" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" VerticalAlignment="Center" 
                                Margin="0,4,0,0" FontSize="14" Text="{Binding LoadingStatus}" Foreground="{DynamicResource PlainText}"/>
                 </StackPanel>
