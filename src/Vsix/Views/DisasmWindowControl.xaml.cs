@@ -101,14 +101,23 @@ public partial class DisasmWindowControl
             
             switch (elementColor.Name)
             {
-                case "Keywords":
+                case "Keyword":
                     elementColor.Foreground = LoadBrushFromResources("KeywordColor");
+                    break;
+                case "KeywordControl":
+                    elementColor.Foreground = LoadBrushFromResources("KeywordControlColor");
                     break;
                 case "Comment":
                     elementColor.Foreground = LoadBrushFromResources("CommentColor");
                     break;
+                case "XMLDocComment":
+                    elementColor.Foreground = LoadBrushFromResources("XMLDocCommentColor");
+                    break;
                 case "Char":
                     elementColor.Foreground = LoadBrushFromResources("CharColor");
+                    break;
+                case "NoOperation":
+                    elementColor.Foreground = LoadBrushFromResources("NoOperationColor");
                     break;
             }
         }
@@ -144,10 +153,13 @@ public partial class DisasmWindowControl
 
         var textFormatMap = classificationFormatMapService.GetClassificationFormatMap("text");
         Resources["KeywordColor"] = GetEditorBrushFromClassification(textFormatMap, "keyword");
+        Resources["KeywordControlColor"] = GetEditorBrushFromClassification(textFormatMap, "keyword - control");
         Resources["CommentColor"] = GetEditorBrushFromClassification(textFormatMap, "comment");
+        Resources["XMLDocCommentColor"] = GetEditorBrushFromClassification(textFormatMap, "xml doc comment - text");
         Resources["CharColor"] = GetEditorBrushFromClassification(textFormatMap, "string");
         Resources["NumberLineBrush"] = GetEditorBrushFromClassification(textFormatMap, "line number");
-
+        Resources["NoOperationColor"] = GetEditorBrushFromClassification(textFormatMap, "excluded code");
+        
         UpdateAsmSyntaxHighlighting();
 
         SolidColorBrush GetEditorBrushFromClassification(IClassificationFormatMap classificationMap, string classificationName)

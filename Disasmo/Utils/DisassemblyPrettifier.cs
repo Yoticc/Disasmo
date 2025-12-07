@@ -118,7 +118,7 @@ public static class DisassemblyPrettifier
         }
         catch { }
 
-        return rawAsm; 
+        return rawAsm;
 
         static int ParseMethodTotalSizes(IEnumerable<Block> methodBlocks)
         {

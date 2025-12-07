@@ -28,8 +28,6 @@
         <SolidColorBrush x:Key="CheckBoxBorder"/>
         <SolidColorBrush x:Key="CheckBoxBackground"/>
         <SolidColorBrush x:Key="CheckBoxHoveredBackground"/>
-        <SolidColorBrush x:Key="KeywordColor"/>
-        <SolidColorBrush x:Key="CharColor"/>
         <SolidColorBrush x:Key="CommentColor"/>
 
         <SolidColorBrush x:Key="EnvironmentBackground" Color="{DynamicResource ResourceKey=VsColor.EnvironmentBackgroundTexture}"/>

@@ -1,23 +1,29 @@
 ﻿<?xml version="1.0"?>
 <SyntaxDefinition name="ASM" extensions=".asm" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
-  <Color name="Comment" foreground="#57ad41" exampleText="; comment" />
+  <Color name="Comment" foreground="#57ad41" exampleText="; method comment" />
+  <Color name="XMLDocComment" foreground="#57ad41" exampleText=";; asm comment" />
   <Color name="Char" foreground="Red" exampleText="name = 'abc'"/>
-  <Color name="Keywords" fontWeight="bold" foreground="Blue" exampleText="mov rax, rcx"/>
+  <Color name="Keyword" fontWeight="bold" foreground="Blue" exampleText="mov rax, rcx"/>
+  <Color name="KeywordControl" fontWeight="bold" foreground="Blue" exampleText="jmp rax"/>
+  <Color name="NoOperation" fontWeight="bold" foreground="Gray" exampleText="nop"/>
 
   <RuleSet name="CommentMarkerSet">
-    <Keywords fontWeight="bold" foreground="Green">
+    <Keywords fontWeight="bold">
       <Word>Total bytes of code</Word>
       <Word>Method</Word>
     </Keywords>
   </RuleSet>
 
   <RuleSet ignoreCase="true">
-    <Span color="Comment" ruleSet="CommentMarkerSet">
-      <Begin>;</Begin>
-    </Span>
-    <Span color="Comment" ruleSet="CommentMarkerSet">
+    <Span color="XMLDocComment" fontWeight="bold">
       <Begin>//</Begin>
     </Span>
+	<Span color="XMLDocComment" fontWeight="bold">
+	  <Begin>;;</Begin>
+	</Span>
+	<Span color="Comment" ruleSet="CommentMarkerSet">
+      <Begin>;</Begin>
+	</Span>
     <Span color="Char">
       <Begin>'</Begin>
       <End>'</End>
@@ -25,8 +31,24 @@
         <Span begin="\\" end="."/>
       </RuleSet>
     </Span>
+	
+	<Span>
+	  <Begin>:</Begin>
+	</Span>
 
-    <Keywords color="Keywords">
+	<Span>
+      <Begin>\(</Begin>
+	</Span>
+
+	<Span color="NoOperation">
+		<Begin>nop </Begin>
+	</Span>
+
+	<Span color="NoOperation">
+		<Begin>66 nop </Begin>
+	</Span>
+
+	<Keywords color="Keyword">
       <Word>.break</Word>
       <Word>.breakif</Word>
       <Word>.continue</Word>
@@ -328,9 +350,6 @@
       <Word>insertq</Word>
       <Word>insl</Word>
       <Word>insw</Word>
-      <Word>int</Word>
-      <Word>int03</Word>
-      <Word>int3</Word>
       <Word>into</Word>
       <Word>invd</Word>
       <Word>invept</Word>
@@ -339,45 +358,6 @@
       <Word>invoke</Word>
       <Word>invpcid</Word>
       <Word>invvpid</Word>
-      <Word>iret</Word>
-      <Word>iretd</Word>
-      <Word>iretl</Word>
-      <Word>iretq</Word>
-      <Word>iretw</Word>
-      <Word>ja</Word>
-      <Word>jae</Word>
-      <Word>jb</Word>
-      <Word>jbe</Word>
-      <Word>jc</Word>
-      <Word>jcxz</Word>
-      <Word>je</Word>
-      <Word>jecxz</Word>
-      <Word>jg</Word>
-      <Word>jge</Word>
-      <Word>jl</Word>
-      <Word>jle</Word>
-      <Word>jmp</Word>
-      <Word>jna</Word>
-      <Word>jnae</Word>
-      <Word>jnb</Word>
-      <Word>jnbe</Word>
-      <Word>jnc</Word>
-      <Word>jne</Word>
-      <Word>jng</Word>
-      <Word>jnge</Word>
-      <Word>jnl</Word>
-      <Word>jnle</Word>
-      <Word>jno</Word>
-      <Word>jnp</Word>
-      <Word>jns</Word>
-      <Word>jnz</Word>
-      <Word>jo</Word>
-      <Word>jp</Word>
-      <Word>jpe</Word>
-      <Word>jpo</Word>
-      <Word>jrcxz</Word>
-      <Word>js</Word>
-      <Word>jz</Word>
       <Word>kandnw</Word>
       <Word>kandw</Word>
       <Word>kmovw</Word>
@@ -406,7 +386,6 @@
       <Word>lgdt</Word>
       <Word>lgs</Word>
       <Word>lidt</Word>
-      <Word>ljmp</Word>
       <Word>lldt</Word>
       <Word>lmsw</Word>
       <Word>loadall</Word>
@@ -418,15 +397,6 @@
       <Word>lodsl</Word>
       <Word>lodsq</Word>
       <Word>lodsw</Word>
-      <Word>loop</Word>
-      <Word>loope</Word>
-      <Word>loopne</Word>
-      <Word>loopnz</Word>
-      <Word>loopz</Word>
-      <Word>lret</Word>
-      <Word>lretl</Word>
-      <Word>lretq</Word>
-      <Word>lretw</Word>
       <Word>lsl</Word>
       <Word>lss</Word>
       <Word>ltr</Word>
@@ -729,12 +699,6 @@
       <Word>repne</Word>
       <Word>repnz</Word>
       <Word>repz</Word>
-      <Word>ret</Word>
-      <Word>retf</Word>
-      <Word>retl</Word>
-      <Word>retn</Word>
-      <Word>retq</Word>
-      <Word>retw</Word>
       <Word>rex_jmp</Word>
       <Word>rol</Word>
       <Word>ror</Word>
@@ -851,7 +815,6 @@
       <Word>swapgs</Word>
       <Word>syscall</Word>
       <Word>sysenter</Word>
-      <Word>sysexit</Word>
       <Word>t1mskc</Word>
       <Word>test</Word>
       <Word>tzcnt</Word>
@@ -1466,14 +1429,10 @@
       <Word>adr</Word>
       <Word>adrl</Word>
       <Word>asr</Word>
-      <Word>b</Word>
       <Word>bfc</Word>
       <Word>bfi</Word>
       <Word>bic</Word>
       <Word>bkpt</Word>
-      <Word>bl</Word>
-      <Word>blx</Word>
-      <Word>bx</Word>
       <Word>bxj</Word>
       <Word>cbz</Word>
       <Word>cbnz</Word>
@@ -1488,7 +1447,6 @@
       <Word>dmb</Word>
       <Word>dsb</Word>
       <Word>eor</Word>
-      <Word>eret</Word>
       <Word>hvc</Word>
       <Word>isb</Word>
       <Word>it</Word>
@@ -1589,8 +1547,6 @@
       <Word>sxtb16</Word>
       <Word>sxth</Word>
       <Word>sys</Word>
-      <Word>tbb</Word>
-      <Word>tbh</Word>
       <Word>teq</Word>
       <Word>tst</Word>
       <Word>uadd8</Word>
@@ -1633,36 +1589,18 @@
       <Word>movs</Word>
       <Word>movw</Word>
       <Word>lsls</Word>
-      <Word>adds</Word>
-      <Word>beq</Word>
-      <Word>ble</Word>
-      <Word>bne</Word>
-      <Word>bgt</Word>
+      <Word>adds</Word>      
       <Word>stp</Word>
       <Word>movz</Word>
       <Word>movk</Word>
       <Word>blr</Word>
       <Word>sxtw</Word>
       <Word>ldp</Word>
-      <Word>brk</Word>
       <Word>adcs</Word>
       <Word>adrp</Word>
       <Word>ands</Word>
       <Word>asrv</Word>
       <Word>at</Word>
-      <Word>bcs</Word>
-      <Word>bhs</Word>
-      <Word>bcc</Word>
-      <Word>blo</Word>
-      <Word>bmi</Word>
-      <Word>bpl</Word>
-      <Word>bvs</Word>
-      <Word>bvc</Word>
-      <Word>bhi</Word>
-      <Word>bls</Word>
-      <Word>bge</Word>
-      <Word>blt</Word>
-      <Word>bal</Word>
       <Word>bnv</Word>
       <Word>b.eq</Word>
       <Word>b.ne</Word>
@@ -2045,8 +1983,103 @@
       <Word>xtn2</Word>
       <Word>zip1</Word>
       <Word>zip2</Word>
-      <Word>int3</Word>
       <Word>align</Word>
     </Keywords>
+
+	<Keywords color="KeywordControl">
+	  <!-- x86/x64 mnemonics -->
+	  <Word>jmp</Word>
+	  <Word>jcxz</Word>
+	  <Word>jecxz</Word>
+	  <Word>ja</Word>
+	  <Word>jae</Word>
+	  <Word>jb</Word>
+	  <Word>jbe</Word>
+	  <Word>jc</Word>
+	  <Word>je</Word>
+	  <Word>jg</Word>
+	  <Word>jge</Word>
+	  <Word>jl</Word>
+	  <Word>jle</Word>
+	  <Word>jna</Word>
+	  <Word>jnae</Word>
+	  <Word>jnb</Word>
+	  <Word>jnbe</Word>
+	  <Word>jnc</Word>
+	  <Word>jne</Word>
+	  <Word>jng</Word>
+	  <Word>jnge</Word>
+	  <Word>jnl</Word>
+	  <Word>jnle</Word>
+	  <Word>jno</Word>
+	  <Word>jnp</Word>
+	  <Word>jns</Word>
+	  <Word>jnz</Word>
+	  <Word>jo</Word>
+	  <Word>jp</Word>
+	  <Word>jpe</Word>
+	  <Word>jpo</Word>
+	  <Word>jrcxz</Word>
+	  <Word>js</Word>
+	  <Word>jz</Word>
+	  <Word>ret</Word>
+	  <Word>retf</Word>
+	  <Word>retl</Word>
+	  <Word>retn</Word>
+	  <Word>retq</Word>
+	  <Word>retw</Word>
+	  <Word>iret</Word>
+	  <Word>iretd</Word>
+	  <Word>iretl</Word>
+	  <Word>iretq</Word>
+	  <Word>iretw</Word>
+	  <Word>sysexit</Word>
+	  <Word>sysret</Word>
+	  <Word>eret</Word>
+	  <Word>lret</Word>
+	  <Word>lretl</Word>
+	  <Word>lretq</Word>
+	  <Word>lretw</Word>
+	  <Word>ljmp</Word>
+	  <Word>loop</Word>
+	  <Word>loope</Word>
+	  <Word>loopne</Word>
+	  <Word>loopnz</Word>
+	  <Word>loopz</Word>
+	  <!-- arm/arm46 mnemonics -->
+	  <Word>b</Word>
+	  <Word>bl</Word>
+	  <Word>bx</Word>
+	  <Word>blx</Word>
+	  <Word>beq</Word>
+	  <Word>ble</Word>
+	  <Word>bne</Word>
+	  <Word>bgt</Word>
+	  <Word>bge</Word>
+	  <Word>blt</Word>
+	  <Word>bcs</Word>
+	  <Word>bhs</Word>
+	  <Word>bcc</Word>
+	  <Word>blo</Word>
+	  <Word>bmi</Word>
+	  <Word>bpl</Word>
+	  <Word>bvs</Word>
+	  <Word>bvc</Word>
+	  <Word>bhi</Word>
+	  <Word>bls</Word>
+	  <Word>bal</Word>
+	  <Word>tbb</Word>
+	  <Word>tbh</Word>
+	</Keywords>
+
+	<Keywords fontWeight="bold" foreground="Black" background="#80EF5350">
+	  <!-- x86/x64 mnemonics -->
+      <Word>syscall</Word>
+      <Word>int</Word>
+	  <Word>int3</Word>
+	  <Word>int03</Word>
+	  <!-- arm/arm46 mnemonics -->
+	  <Word>brk</Word>
+	</Keywords>
   </RuleSet>
 </SyntaxDefinition>
