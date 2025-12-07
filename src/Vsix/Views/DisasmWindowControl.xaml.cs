@@ -43,7 +43,7 @@ public partial class DisasmWindowControl
             // AvalonEdit is not bindable (lazy workaround)
             if (e.PropertyName == "Output") OutputEditor.Text = MainViewModel.Output;
             if (e.PropertyName == "PreviousOutput") OutputEditorPrev.Text = MainViewModel.PreviousOutput;
-            if (e.PropertyName == "Success") ApplySyntaxHighlighting(asm: MainViewModel.IsAsmContextInEditor);
+            if (e.PropertyName == "Success") ApplySyntaxHighlighting(asm: MainViewModel.LastContextIsAsm);
         };
 
         MainViewModel.MainPageRequested += () =>
@@ -129,7 +129,7 @@ public partial class DisasmWindowControl
     {
         _asmSyntaxHighlighting = GetAsmSyntaxHighlighting();
 
-        if (MainViewModel.IsAsmContextInEditor)
+        if (MainViewModel.LastContextIsAsm)
             ApplySyntaxHighlighting(asm: true);
     }
 

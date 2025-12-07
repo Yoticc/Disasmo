@@ -26,6 +26,7 @@ public class MainViewModel : ViewModelBase
     private string _stopwatchStatus;
     private string[] _jitDumpPhases;
     private bool _isLoading;
+    private bool _lastJitDumpStatus;
     private ISymbol _currentSymbol;
     private CAProject _currentProject;
     private bool _success;
@@ -160,7 +161,7 @@ public class MainViewModel : ViewModelBase
         }
     }
 
-    public bool IsAsmContextInEditor => Success && !SettingsViewModel.JitDumpInsteadOfDisasm;
+    public bool LastContextIsAsm => Success && !_lastJitDumpStatus;
 
     public async Task RunFinalExeAsync(DisasmoSymbolInfo symbolInfo, IProjectProperties projectProperties)
     {
@@ -175,6 +176,7 @@ public class MainViewModel : ViewModelBase
             IsLoading = true;
             FlowgraphPngPath = null;
             LoadingStatus = "Loading...";
+            _lastJitDumpStatus = SettingsViewModel.JitDumpInsteadOfDisasm;
 
             var destinationFolder = DisasmoOutputDirectory;
             if (!Path.IsPathRooted(destinationFolder))
@@ -882,7 +884,7 @@ public class MainViewModel : ViewModelBase
                                          $"/p:CustomBeforeDirectoryBuildProps=\"{tempProperties}\" " +
                                          $"/p:TreatWarningsAsErrors=false \"{_currentProjectPath}\"";
 
-                Dictionary<string, string> fasterBuildEnvVars = new Dictionary<string, string>
+                var fasterBuildEnvVars = new Dictionary<string, string>
                 {
                     ["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1",
                     ["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1"
