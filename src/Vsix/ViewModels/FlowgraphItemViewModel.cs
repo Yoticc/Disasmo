@@ -14,6 +14,7 @@ public class FlowgraphItemViewModel : ViewModelBase
     private string _dotFileUrl;
     private string _name;
     private bool _isBusy;
+    private Task _currentLoadImageTask;
 
     public FlowgraphItemViewModel(SettingsViewModel settingsViewModel)
     {
@@ -46,21 +47,21 @@ public class FlowgraphItemViewModel : ViewModelBase
         set => Set(ref _isBusy, value);
     }
 
-    public async Task LoadImageAsync(CancellationToken ct)
+    public async Task LoadImageAsync(CancellationToken cancellationToken)
     {
-        if (File.Exists(DotFileUrl + ".png"))
+        var dotImageUrl = DotFileUrl + ".png";
+        if (File.Exists(dotImageUrl))
         {
-            ImageUrl = DotFileUrl + ".png";
+            ImageUrl = dotImageUrl;
         }
         else
         {
             IsBusy = true;
             try
             {
-                var image = DotFileUrl + ".png";
-                var dotExeArgs = $"-Tpng -o\"{image}\" -Kdot \"{DotFileUrl}\"";
-                await ProcessUtils.RunProcess(_settingsViewModel.GraphvisDotPath, dotExeArgs, cancellationToken: ct);
-                ImageUrl = image;
+                var dotExeArgs = $"-Tpng -o\"{dotImageUrl}\" -Kdot \"{DotFileUrl}\"";
+                await ProcessUtils.RunProcess(_settingsViewModel.GraphvisDotPath, dotExeArgs, cancellationToken: cancellationToken);
+                ImageUrl = dotImageUrl;
             }
             catch (Exception ex)
             {

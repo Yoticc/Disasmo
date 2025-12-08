@@ -191,6 +191,8 @@ public partial class DisasmWindowControl
             selectedTab.Focus();
 
         OnThemeUpdated();
+
+        _ = MainViewModel.CheckUpdates();
     }
 
     // Some custom style properties cannot be applied when the style is specified implicitly.

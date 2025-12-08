@@ -19,9 +19,6 @@ public class SettingsViewModel : ViewModelBase
     private string _crossgen2Args;
     private string _ilcArgs;
     private bool _showAsmComments;
-    private bool _updateIsAvailable;
-    private Version _currentVersion;
-    private Version _availableVersion;
     private bool _useDotnetPublishForReload;
     private bool _useDotnetBuildForReload;
     private bool _runAppMode;
@@ -54,7 +51,6 @@ public class SettingsViewModel : ViewModelBase
         RunAppMode = Settings.Default.RunAppMode_V9;
         UseNoRestoreFlag = Settings.Default.UseNoRestoreFlag_V9;
         FontSize = Settings.Default.FontSize;
-        UpdateIsAvailable = false;
         UseTieredJit = Settings.Default.UseTieredJit_V4;
         UseCustomRuntime = Settings.Default.UseCustomRuntime_V4;
         GraphvisDotPath = Settings.Default.GraphvisDotPath;
@@ -66,15 +62,6 @@ public class SettingsViewModel : ViewModelBase
         DisableLightBulb = Settings.Default.DisableLightBulb;
         DontGuessTargetFramework = Settings.Default.DontGuessTargetFramework;
         OverridenTargetFramework = Settings.Default.OverridenTargetFramework;
-        CheckUpdates();
-    }
-
-    private async void CheckUpdates()
-    {
-        CurrentVersion = DisasmoPackage.Current?.GetCurrentVersion();
-        AvailableVersion = await DisasmoPackage.Current?.GetLatestVersionOnlineAsync();
-        if (CurrentVersion != null && AvailableVersion > CurrentVersion)
-            UpdateIsAvailable = true;
     }
 
     public static string Arch { get; set; } = "x64";
@@ -447,24 +434,6 @@ public class SettingsViewModel : ViewModelBase
             Settings.Default.IlcArgs_V9 = value;
             Settings.Default.Save();
         }
-    }
-
-    public bool UpdateIsAvailable
-    {
-        get => _updateIsAvailable;
-        set { Set(ref _updateIsAvailable, value); }
-    }
-
-    public Version CurrentVersion
-    {
-        get => _currentVersion;
-        set => Set(ref _currentVersion, value);
-    }
-
-    public Version AvailableVersion
-    {
-        get => _availableVersion;
-        set => Set(ref _availableVersion, value);
     }
 
     public ICommand BrowseCommand => new RelayCommand(() =>

@@ -455,12 +455,12 @@
                         <TextBlock>
                             <Hyperlink Foreground="{DynamicResource HighlightHyperlinkText}" RequestNavigate="OnOpenReleaseNotes" 
                                        NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md">
-                                <TextBlock Text="{Binding SettingsViewModel.CurrentVersion}"/>
+                                <TextBlock Text="{Binding CurrentVersion}"/>
                             </Hyperlink>
                             <Hyperlink Foreground="{DynamicResource HighlightHyperlinkText}" RequestNavigate="OnOpenReleaseNotes" 
                                        NavigateUri="https://github.com/EgorBo/Disasmo/blob/main/RELEASE_NOTES.md">
                                 <TextBlock Text="(new available)"
-                                           Visibility="{Binding SettingsViewModel.UpdateIsAvailable, Converter={StaticResource BooleanToVisibility}}"/>
+                                           Visibility="{Binding UpdateIsAvailable, Converter={StaticResource BooleanToVisibility}}"/>
                             </Hyperlink>
                         </TextBlock>
                     </StackPanel>

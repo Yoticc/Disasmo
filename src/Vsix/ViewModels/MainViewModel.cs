@@ -1,6 +1,7 @@
 ﻿using Disasmo.ViewModels;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using Microsoft.Build.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Properties;
@@ -33,9 +34,12 @@ public class MainViewModel : ViewModelBase
     private string _currentProjectPath;
     private string _currentTargetFramework;
     private string _flowgraphPngPath;
+    private bool _updateIsAvailable;
     private string DisasmoOutputDirectory = "";
     private ObservableCollection<FlowgraphItemViewModel> _flowgraphPhases = new();
     private FlowgraphItemViewModel _selectedPhase;
+    private Version _currentVersion;
+    private Version _availableVersion;
 
     // Let's use new name for the temp folder each version to avoid possible issues (e.g. changes in the Disasmo.Loader)
     private string DisasmoFolder => "Disasmo-v" + DisasmoPackage.Current?.GetCurrentVersion();
@@ -106,6 +110,12 @@ public class MainViewModel : ViewModelBase
 
     public string DefaultHotKey => DisasmoPackage.HotKey;
 
+    public bool UpdateIsAvailable
+    {
+        get => _updateIsAvailable;
+        set { Set(ref _updateIsAvailable, value); }
+    }
+
     public bool Success
     {
         get => _success;
@@ -162,6 +172,26 @@ public class MainViewModel : ViewModelBase
     }
 
     public bool LastContextIsAsm => Success && !_lastJitDumpStatus;
+
+    public Version CurrentVersion
+    {
+        get => _currentVersion;
+        set => Set(ref _currentVersion, value);
+    }
+
+    public Version AvailableVersion
+    {
+        get => _availableVersion;
+        set => Set(ref _availableVersion, value);
+    }
+
+    public async Task CheckUpdates()
+    {
+        CurrentVersion = DisasmoPackage.Current?.GetCurrentVersion();
+        AvailableVersion = await DisasmoPackage.Current?.GetLatestVersionOnlineAsync();
+        if (CurrentVersion != null && AvailableVersion != null && AvailableVersion > CurrentVersion)
+            UpdateIsAvailable = true;
+    }
 
     public async Task RunFinalExeAsync(DisasmoSymbolInfo symbolInfo, IProjectProperties projectProperties)
     {
