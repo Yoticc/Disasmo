@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Commanding;
 using Microsoft.VisualStudio.Editor.Commanding;
+using Microsoft.VisualStudio.ExtensionManager;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
@@ -28,6 +29,7 @@ namespace Disasmo;
 public sealed class DisasmoPackage : AsyncPackage
 {
     public const string PackageGuidString = "6d23b8d8-92f1-4f92-947a-b9021f6ab3dc";
+    public const string PackageProductIdString = "Disasmo.39513ef5-c3ee-4547-b7be-f29c752b591d";
 
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
@@ -69,38 +71,44 @@ public sealed class DisasmoPackage : AsyncPackage
 
     public static DisasmoPackage Current { get; set; }
 
-    public static async Task<Version> GetLatestVersionOnlineAsync()
+    public async Task<Version> GetLatestVersionOnlineAsync()
     {
         try
         {
-            await Task.Delay(3000);
+            // Question: Is there an API to do it?
+            // Answer:
+            // Visual Studio has its own functionality for fetching current package version.
+            // For example: Microsoft.VisualStudio.Setup.Services.MarketplaceExtensionService (internal)
+            //              NuGet.PackageManagement.UI.Utility.NuGetSearchServiceReconnector (internal)
+            //              Microsoft.VisualStudio.ExtensionManager.Implementation.ExtensionRepositoryService
+            //               (public, BUT vssdk.extensionmanager DOES NOT PROVIDE GetSearchQueryExtensions METHOD FOR IVsExtensionRepository)
+            // Therefore, the easiest method is to directly request the website.
 
-            // Is there an API to do it?
             using var client = new HttpClient();
             var content = await client.GetStringAsync("https://marketplace.visualstudio.com/items?itemName=EgorBogatov.Disasmo");
             var marker = "extensions/egorbogatov/disasmo/";
             var index = content.IndexOf(marker);
             return Version.Parse(content.Substring(index + marker.Length, content.IndexOf('/', index + marker.Length) - index - marker.Length));
         }
-        catch { return new Version(0, 0); }
+        catch 
+        {
+            return new Version(0, 0); 
+        }
     }
 
     public Version GetCurrentVersion()
     {
-        //TODO: Fix
-        return new Version(5, 9, 2);
-
-        //try
-        //{
-        //    // get ExtensionManager
-        //    IVsExtensionManager manager = GetService(typeof(SVsExtensionManager)) as IVsExtensionManager;
-        //    // get your extension by Product Id
-        //    IInstalledExtension myExtension = manager.GetInstalledExtension("Disasmo.39513ef5-c3ee-4547-b7be-f29c752b591d");
-        //    // get current version
-        //    Version currentVersion = myExtension.Header.Version;
-        //    return currentVersion;
-        //}
-        //catch {return new Version(0, 0); }
+        try
+        {
+            var extensionManager = GetService(typeof(SVsExtensionManager)) as IVsExtensionManager;
+            var ourExtension = extensionManager.GetInstalledExtension(PackageProductIdString);
+            var currentVersion = ourExtension.Header.Version;
+            return currentVersion;
+        }
+        catch
+        {
+            return new Version(0, 0); 
+        }
     }
 }
 

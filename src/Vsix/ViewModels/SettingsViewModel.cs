@@ -72,7 +72,7 @@ public class SettingsViewModel : ViewModelBase
     private async void CheckUpdates()
     {
         CurrentVersion = DisasmoPackage.Current?.GetCurrentVersion();
-        AvailableVersion = await DisasmoPackage.GetLatestVersionOnlineAsync();
+        AvailableVersion = await DisasmoPackage.Current?.GetLatestVersionOnlineAsync();
         if (CurrentVersion != null && AvailableVersion > CurrentVersion)
             UpdateIsAvailable = true;
     }
