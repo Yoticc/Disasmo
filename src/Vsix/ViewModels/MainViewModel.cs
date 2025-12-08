@@ -564,7 +564,7 @@ public class MainViewModel : ViewModelBase
         if (SettingsViewModel.JitDumpInsteadOfDisasm || SettingsViewModel.PrintInlinees)
             return output;
 
-        return DisassemblyPrettifier.Prettify(output, !SettingsViewModel.ShowAsmComments && !SettingsViewModel.RunAppMode);
+        return DisassemblyPrettifier.Prettify(output, minimalComments: !SettingsViewModel.ShowAsmComments, isInRunMode: SettingsViewModel.RunAppMode);
     }
 
     private UnconfiguredProject GetUnconfiguredProject(Project project)

@@ -27,7 +27,7 @@ public static class DisassemblyPrettifier
     ///   ; Total bytes of code 76, prolog size 5, PerfScore 41.52, instruction count 3, bla-bla for method Program:MyMethod():int (Tier0)
     ///   ; ============================================================
     /// </summary>
-    public static string Prettify(string rawAsm, bool minimalComments)
+    public static string Prettify(string rawAsm, bool minimalComments, bool isInRunMode)
     {
         const string MethodStartedMarker = "; Assembly listing for method ";
 
@@ -50,7 +50,7 @@ public static class DisassemblyPrettifier
                 }
                 else if (currentMethod == "") // In case disasm's output format has changed
                 {
-                    Log($"Changed disasm's output format was detected.");
+                    Log($"Wrong disasm's output format was detected. isInRunMode: {isInRunMode}");
                     return rawAsm;
                 }
 
@@ -99,14 +99,16 @@ public static class DisassemblyPrettifier
                 var size = ParseMethodTotalSizes(methodBlocks);
 
                 methodBlocks = methodBlocks.Where(m => m.Type != BlockType.Comments);
-                output.Append($"; Method {method.Key}");
+                output.AppendLine($"; Method {method.Key}");
+
+                output.Append("; Total bytes of code: ")
+                    .Append(size)
+                    .AppendLine();
 
                 foreach (var block in methodBlocks)
                     output.Append(block.ImmutableData);
 
-                output.Append("; Total bytes of code: ")
-                    .Append(size)
-                    .AppendLine()
+                output.AppendLine()
                     .AppendLine();
             }
 
@@ -114,7 +116,7 @@ public static class DisassemblyPrettifier
         }
         catch (Exception ex) when (ex is not MemberAccessException) // In case disasm's output format has changed
         {
-            Log($"Exception. Disasm's output format may have changed.");
+            Log($"Exception. Disasm's output format may have changed. isInRunMode: {isInRunMode}");
         }
         catch { }
 
@@ -124,16 +126,25 @@ public static class DisassemblyPrettifier
         {
             const string Marker = "; Total bytes of code ";
 
-            var lineToParse = methodBlocks.Last().ImmutableData;
+            var reversedMethodBlocks = methodBlocks.Reverse();
+            foreach (var methodBlock in reversedMethodBlocks)
+            {
+                var lineToParse = methodBlock.ImmutableData;
+                var markerStartIndex = lineToParse.IndexOf(Marker);
+                if (markerStartIndex == -1)
+                    continue;
 
-            var sizePartStartIndex = lineToParse.IndexOf(Marker) + Marker.Length;
-            var commaIndex = lineToParse.IndexOf(',', sizePartStartIndex);
+                var sizePartStartIndex = markerStartIndex + Marker.Length;
+                var commaIndex = lineToParse.IndexOf(',', sizePartStartIndex);
 
-            var sizePartString = commaIndex == -1 ?
-                lineToParse.Substring(sizePartStartIndex) :
-                lineToParse.Substring(sizePartStartIndex, commaIndex - sizePartStartIndex);
+                var sizePartString = commaIndex == -1 ?
+                    lineToParse.Substring(sizePartStartIndex) :
+                    lineToParse.Substring(sizePartStartIndex, commaIndex - sizePartStartIndex);
 
-            return int.Parse(sizePartString);
+                return int.Parse(sizePartString);
+            }
+
+            throw new Exception();
         }   
     }
 
