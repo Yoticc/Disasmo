@@ -1,0 +1,14 @@
+﻿using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace Disasmo.Utils;
+
+public class BoolToFontUnderlineConverter : DependencyObject, IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is not null && (bool)value ? TextDecorations.Underline : null;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
+}

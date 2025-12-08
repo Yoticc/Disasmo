@@ -192,7 +192,7 @@ public partial class DisasmWindowControl
 
         OnThemeUpdated();
 
-        _ = MainViewModel.CheckUpdates();
+        _ = MainViewModel.CheckUpdatesAsync();
     }
 
     // Some custom style properties cannot be applied when the style is specified implicitly.

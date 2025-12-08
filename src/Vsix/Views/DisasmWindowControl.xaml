@@ -21,6 +21,7 @@
         <BooleanToVisibilityConverter x:Key="BooleanToVisibility"/>
         <utils:InversedBooleanToVisibilityConverter x:Key="InversedBooleanToVisibility"/>
         <utils:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
+        <utils:BoolToFontUnderlineConverter x:Key="BoolToFontUnderlineConverter"/>
 
         <SolidColorBrush x:Key="PlainText"/>
         <SolidColorBrush x:Key="FileTabInactiveBorderBrush"/>
@@ -247,7 +248,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>                    
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="220"/>
                         <ColumnDefinition/>
                     </Grid.ColumnDefinitions>
                     
@@ -271,11 +272,14 @@
                         <Image Source="{Binding SelectedPhase.ImageUrl}" Stretch="None"/>
                     </ScrollViewer>
 
-                    <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" 
-                          Visibility="{Binding SelectedPhase.IsBusy, Converter={StaticResource BooleanToVisibility}}" 
+                    <Grid Grid.Row="1" Grid.Column="1"
+                          Visibility="{Binding IsPhasesLoading, Converter={StaticResource BooleanToVisibility}}"
                           Background="{DynamicResource LoadingBackground}">
-                        <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
-                        <TextBlock Foreground="Black" Text="Loading..." HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14"/>
+
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" >
+                            <ProgressBar IsIndeterminate="True" Width="340" Height="20"/>
+                            <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding PhaseLoadingPhrase}" TextAlignment="Center" Margin="0,8,0,0" FontSize="14"/>
+                        </StackPanel>
                     </Grid>
 
                     <!-->What about the left side scrollbar? It requires a bunch of template code for its own list box implementation<-->
@@ -284,8 +288,16 @@
                              Grid.Row="1" ItemsSource="{Binding FlowgraphPhases}" SelectedItem="{Binding SelectedPhase}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Foreground="{DynamicResource PlainText}" HorizontalAlignment="Left" VerticalAlignment="Center"
-                                           Text="{Binding Name}" FontWeight="{Binding IsInitialPhase, Converter={StaticResource BoolToFontWeightConverter}}"/>
+                                <Grid>
+                                    <TextBlock Foreground="{DynamicResource PlainText}"
+                                               FontWeight="{Binding IsInitialized, Converter={StaticResource BoolToFontWeightConverter}}">
+                                        <Run Text="{Binding Ordinal}"/><Run Text="."/>
+                                    </TextBlock>
+
+                                    <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding Name}" Margin="26,0,0,0"
+                                               TextDecorations="{Binding IsInitialPhase, Converter={StaticResource BoolToFontUnderlineConverter}}" 
+                                               FontWeight="{Binding IsInitialized, Converter={StaticResource BoolToFontWeightConverter}}"/>
+                                </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

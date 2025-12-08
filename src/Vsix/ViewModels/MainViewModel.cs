@@ -1,7 +1,6 @@
 ﻿using Disasmo.ViewModels;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
-using Microsoft.Build.Utilities;
 using Microsoft.CodeAnalysis;
 using Microsoft.VisualStudio.ProjectSystem;
 using Microsoft.VisualStudio.ProjectSystem.Properties;
@@ -21,12 +20,20 @@ namespace Disasmo;
 
 public class MainViewModel : ViewModelBase
 {
+    private static readonly int MaxCountOfLoadingPhases = Environment.ProcessorCount;
+    // dot.exe eats exactly one virtual core. Assuming that the number of virtual cores
+    // equals to the number of physical cores (Environment.ProcessorCount) multiplied to 2. 
+    // By the expression above, we allow dot.exe to use only 50% of the cpu resources.
+    // If don't take the limitation into account, dot.exe will eat up all the cpu resources,
+    // leading to at least system interruptions, and at worst to a system crash.
+
     private string _output;
     private string _previousOutput;
     private string _loadingStatus;
     private string _stopwatchStatus;
     private string[] _jitDumpPhases;
     private bool _isLoading;
+    private bool _isPhasesLoading;
     private bool _lastJitDumpStatus;
     private ISymbol _currentSymbol;
     private CAProject _currentProject;
@@ -38,6 +45,8 @@ public class MainViewModel : ViewModelBase
     private string DisasmoOutputDirectory = "";
     private ObservableCollection<FlowgraphItemViewModel> _flowgraphPhases = new();
     private FlowgraphItemViewModel _selectedPhase;
+    private int _countOfLoadingPhases;
+    private string _phaseLoadingPhrase;
     private Version _currentVersion;
     private Version _availableVersion;
 
@@ -135,6 +144,15 @@ public class MainViewModel : ViewModelBase
         }
     }
 
+    public bool IsPhasesLoading
+    {
+        get => _isPhasesLoading;
+        set
+        {
+            Set(ref _isPhasesLoading, value);
+        }
+    }
+
     public string StopwatchStatus
     {
         get => _stopwatchStatus;
@@ -167,11 +185,18 @@ public class MainViewModel : ViewModelBase
         set
         {
             Set(ref _selectedPhase, value);
-            _selectedPhase?.LoadImageAsync(UserCancellationToken);
+
+            TryLoadSelectedPhaseImage();
         }
     }
 
     public bool LastContextIsAsm => Success && !_lastJitDumpStatus;
+
+    public string PhaseLoadingPhrase
+    {
+        get => _phaseLoadingPhrase;
+        set => Set(ref _phaseLoadingPhrase, value);
+    }
 
     public Version CurrentVersion
     {
@@ -185,7 +210,7 @@ public class MainViewModel : ViewModelBase
         set => Set(ref _availableVersion, value);
     }
 
-    public async Task CheckUpdates()
+    public async Task CheckUpdatesAsync()
     {
         CurrentVersion = DisasmoPackage.Current?.GetCurrentVersion();
         AvailableVersion = await DisasmoPackage.Current?.GetLatestVersionOnlineAsync();
@@ -539,6 +564,7 @@ public class MainViewModel : ViewModelBase
                 FlowgraphPhases.Clear();
                 var graphs = flowGraphLines.Split(["digraph FlowGraph {"], StringSplitOptions.RemoveEmptyEntries);
                 var graphIndex = 0;
+                var absoluteGraphIndex = 0;
 
                 var flowgraphBaseDirectory = Path.Combine(Path.GetTempPath(), "Disasmo", "Flowgraphs", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(flowgraphBaseDirectory);
@@ -557,15 +583,18 @@ public class MainViewModel : ViewModelBase
                             graphIndex = 0;
                         }
 
-                        name = (++graphIndex) + ". " + name;
+                        graphIndex++;
+                        absoluteGraphIndex++;
 
                         // Ignore invalid path chars
                         name = Path.GetInvalidFileNameChars().Aggregate(name, (current, ic) => current.Replace(ic, '_'));
 
-                        var dotPath = Path.Combine(flowgraphBaseDirectory, $"{name}.dot");
+                        var identifier = absoluteGraphIndex + ". " + name;
+                        var dotPath = Path.Combine(flowgraphBaseDirectory, $"{identifier}.dot");
                         File.WriteAllText(dotPath, "digraph FlowGraph {\n" + graph);
 
-                        FlowgraphPhases.Add(new FlowgraphItemViewModel(SettingsViewModel) { Name = name, DotFileUrl = dotPath, ImageUrl = "" });
+                        var itemViewModel = new FlowgraphItemViewModel(this, SettingsViewModel, graphIndex.ToString(), name, dotPath, string.Empty);
+                        FlowgraphPhases.Add(itemViewModel);
                     }
                     catch (Exception ex)
                     {
@@ -573,7 +602,6 @@ public class MainViewModel : ViewModelBase
                     }
                 }
             }
-
         }
         catch (OperationCanceledException ex)
         {
@@ -993,6 +1021,60 @@ public class MainViewModel : ViewModelBase
             stopwatch.Stop();
             StopwatchStatus = $"Disasm took {stopwatch.Elapsed.TotalSeconds:F1}s";
         }
+    }
+
+    public bool CanLoadUninitializedPhase => MaxCountOfLoadingPhases > _countOfLoadingPhases;
+
+    private void TryLoadSelectedPhaseImage()
+    {
+        if (!_selectedPhase.IsInitialized)
+        {
+            if (CanLoadUninitializedPhase)
+            {
+                _ = _selectedPhase.LoadImageAsync(UserCancellationToken);
+            }
+            else
+            {
+                UpdatePhaseLoadingStatus(hasReachedTheLimit: true);
+                return;
+            }
+        }
+
+        UpdatePhaseLoadingStatus();
+    }
+
+    public void NotifyFlowgraphPhaseLoadingStarted()
+    {
+        Interlocked.Increment(ref _countOfLoadingPhases);
+        UpdatePhaseLoadingStatus();
+    }
+
+    public void NotifyFlowgraphPhaseLoadingFinished()
+    {
+        Interlocked.Decrement(ref _countOfLoadingPhases);
+        UpdatePhaseLoadingStatus();
+        TryLoadSelectedPhaseImage(); // In case selected phase image load was abandoned due to the limit
+    }
+
+    private void UpdatePhaseLoadingStatus(bool hasReachedTheLimit = false)
+    {
+        IsPhasesLoading = !_selectedPhase.IsInitialized;
+
+        if (!IsPhasesLoading)
+            return;
+
+        if (!_selectedPhase.IsBusy && hasReachedTheLimit)
+        {
+            PhaseLoadingPhrase = 
+                $"Cannot load this phase, because the limit" + "\n" + 
+                $"in {MaxCountOfLoadingPhases} simultaneously loaded phases" + "\n" + 
+                $"has been reached." + "\n\n" +
+                $"Wait for the previous phases to load.";
+
+            return;
+        }
+
+        PhaseLoadingPhrase = $"Loading...\nQueue: {_countOfLoadingPhases} of {MaxCountOfLoadingPhases} phases";
     }
 
     private static string FindJitDirectory(string basePath, string arch)
