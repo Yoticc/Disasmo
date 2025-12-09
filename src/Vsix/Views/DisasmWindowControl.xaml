@@ -294,7 +294,7 @@
                                         <Run Text="{Binding Ordinal}"/><Run Text="."/>
                                     </TextBlock>
 
-                                    <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding Name}" Margin="26,0,0,0"
+                                    <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding Name}" Margin="32,0,0,0"
                                                TextDecorations="{Binding IsInitialPhase, Converter={StaticResource BoolToFontUnderlineConverter}}" 
                                                FontWeight="{Binding IsInitialized, Converter={StaticResource BoolToFontWeightConverter}}"/>
                                 </Grid>
@@ -440,7 +440,7 @@
 
                     <Grid Grid.Row="2" Visibility="{Binding IntrinsicsViewModel.IsBusy, Converter={StaticResource BooleanToVisibility}}" Margin="0,6,0,0"
                           Background="{DynamicResource LoadingBackground}">
-                        <ProgressBar IsIndeterminate="True" Width="200" Height="20"/>
+                        <ProgressBar IsIndeterminate="True" Width="230" Height="20"/>
                         <TextBlock Foreground="{DynamicResource PlainText}" Text="{Binding IntrinsicsViewModel.LoadingStatus}" HorizontalAlignment="Center" 
                                    VerticalAlignment="Center" Margin="0,60,0,0" FontSize="14"/>
                     </Grid>

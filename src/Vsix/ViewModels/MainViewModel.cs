@@ -20,9 +20,10 @@ namespace Disasmo;
 
 public class MainViewModel : ViewModelBase
 {
-    private static readonly int MaxCountOfLoadingPhases = Environment.ProcessorCount;
-    // dot.exe eats exactly one virtual core. Assuming that the number of virtual cores
-    // equals to the number of physical cores (Environment.ProcessorCount) multiplied to 2. 
+    private static readonly int MaxCountOfLoadingPhases = Math.Max(2, Environment.ProcessorCount / 2);
+    // dot.exe eats exactly one virtual core. Assuming that the number of
+    // virtual cores (Environment.ProcessorCount) equals to the number of 
+    // physical cores multiplied to 2. 
     // By the expression above, we allow dot.exe to use only 50% of the cpu resources.
     // If don't take the limitation into account, dot.exe will eat up all the cpu resources,
     // leading to at least system interruptions, and at worst to a system crash.

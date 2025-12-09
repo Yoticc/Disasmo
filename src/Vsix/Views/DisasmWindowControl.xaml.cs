@@ -29,15 +29,6 @@ public partial class DisasmWindowControl
     {
         InitializeComponent();
 
-        // Taken from https://gist.github.com/madskristensen/4d205244dd92c37c82e7
-        // It is necessary because usual component system... does not work for some reason.
-        // If you have enough experience, you can try to find out why this happens and then remove this crutch.
-        var compositionService = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
-        compositionService.DefaultCompositionService.SatisfyImportsOnce(this);
-
-        LoadAsmSyntaxDefinition();
-        VSColorTheme.ThemeChanged += e => OnThemeUpdated();
-
         MainViewModel.PropertyChanged += (_, e) =>
         {
             // AvalonEdit is not bindable (lazy workaround)
@@ -185,6 +176,15 @@ public partial class DisasmWindowControl
 
     private void UserControl_Loaded(object sender, RoutedEventArgs e)
     {
+        // Taken from https://gist.github.com/madskristensen/4d205244dd92c37c82e7
+        // It is necessary because usual component system... does not work for some reason.
+        // If you have enough experience, you can try to find out why this happens and then remove this crutch.
+        var compositionService = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+        compositionService.DefaultCompositionService.SatisfyImportsOnce(this);
+
+        LoadAsmSyntaxDefinition();
+        VSColorTheme.ThemeChanged += e => OnThemeUpdated();
+
         // Requires for the initial appearance of the first tab item element
         TabControl.SelectedIndex = 0;
         if (TabControl.Items[0] is System.Windows.Controls.TabItem selectedTab)
