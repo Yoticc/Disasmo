@@ -112,23 +112,22 @@ public sealed class DisasmoPackage : AsyncPackage
     }
 }
 
-public class DisasmoCommandArgs : EditorCommandArgs
-{
-    public DisasmoCommandArgs(ITextView textView, ITextBuffer textBuffer)
-        : base(textView, textBuffer)
-    {
-    }
-}
-
 public class DisasmoCommandBinding
 {
     private const int DisasmoCommandId = 0x0100;
+    private const int DisasmoWindowCommandId = 0x0200;
     private const string DisasmoCommandSet = "4fd0ea18-9f33-43da-ace0-e387656e584c";
 
     [Export]
     [CommandBinding(DisasmoCommandSet, DisasmoCommandId, typeof(DisasmoCommandArgs))]
     internal CommandBindingDefinition disasmoCommandBinding;
+
+    [Export]
+    [CommandBinding(DisasmoCommandSet, DisasmoWindowCommandId, typeof(DisasmoWindowCommandArgs))]
+    internal CommandBindingDefinition disasmoWindowCommandBinding;
 }
+
+public class DisasmoCommandArgs(ITextView textView, ITextBuffer textBuffer) : EditorCommandArgs(textView, textBuffer);
 
 [Export(typeof(ICommandHandler))]
 [ContentType("text")]
@@ -186,6 +185,44 @@ public class DisasmoCommandHandler : ICommandHandler<DisasmoCommandArgs>
                 {
                     viewModel.RunOperationAsync(symbol, document.Project);
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+        }
+    }
+}
+
+public class DisasmoWindowCommandArgs(ITextView textView, ITextBuffer textBuffer) : EditorCommandArgs(textView, textBuffer);
+
+[Export(typeof(ICommandHandler))]
+[ContentType("text")]
+[Name(nameof(DisasmoWindowCommandHandler))]
+public class DisasmoWindowCommandHandler : ICommandHandler<DisasmoWindowCommandArgs>
+{
+    public string DisplayName => "Open DisasmWindow";
+
+    public CommandState GetCommandState(DisasmoWindowCommandArgs args) => CommandState.Available;
+
+    public bool ExecuteCommand(DisasmoWindowCommandArgs args, CommandExecutionContext context)
+    {
+        ThreadPool.QueueUserWorkItem(CallBack);
+
+        return true;
+
+        async void CallBack(object _)
+        {
+            try
+            {
+                if (DisasmoPackage.Current is null)
+                {
+                    MessageBox.Show("Disasmo is still loading... (sometimes it takes a while for add-ins to fully load - it makes VS faster to start).");
+                    return;
+                }
+
+                await DisasmoPackage.Current.JoinableTaskFactory.SwitchToMainThreadAsync();
+                await IdeUtils.ShowWindowAsync<DisasmWindow>(true, default);
             }
             catch (Exception ex)
             {
